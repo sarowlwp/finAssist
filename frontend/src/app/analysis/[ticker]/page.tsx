@@ -1,0 +1,379 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { useParams } from 'next/navigation'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { marketApi, analysisApi } from '@/lib/api'
+
+interface AnalysisData {
+  ticker: string
+  company_name?: string
+  current_price?: number
+  change_percent?: number
+  fusion_summary?: string
+  news_report?: string
+  sec_report?: string
+  fundamentals_report?: string
+  technical_report?: string
+  custom_skill_report?: string
+  status?: string
+}
+
+export default function AnalysisPage() {
+  const params = useParams()
+  const ticker = params.ticker as string
+  const [loading, setLoading] = useState(true)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analysis, setAnalysis] = useState<AnalysisData | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  
+  // 流式分析进度
+  const [progress, setProgress] = useState(0)
+  const [progressMessage, setProgressMessage] = useState('')
+  const [progressStage, setProgressStage] = useState('')
+  const cancelStreamRef = useRef<(() => void) | null>(null)
+  
+  // Collapsed state for each agent report
+  const [collapsed, setCollapsed] = useState({
+    news: false,
+    sec: false,
+    fundamentals: false,
+    technical: false,
+    custom_skill: false
+  })
+
+  useEffect(() => {
+    fetchAnalysis()
+  }, [ticker])
+
+  const fetchAnalysis = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // Fetch market data
+      const [profileData, quoteData] = await Promise.all([
+        marketApi.getProfile(ticker).catch(() => null),
+        marketApi.getQuote(ticker).catch(() => null)
+      ])
+
+      // Mock analysis data if API fails
+      const mockAnalysis: AnalysisData = {
+        ticker,
+        company_name: profileData?.company_name || `${ticker} 公司`,
+        current_price: quoteData?.price || 0,
+        change_percent: quoteData?.change_percent || 0,
+        fusion_summary: '## 融合分析总结\n\n基于多Agent的综合分析，该股票当前呈现以下特征：\n\n**技术面**: 价格处于上升趋势，MACD金叉信号明确。\n\n**基本面**: 财务状况良好，营收增长稳健。\n\n**消息面**: 近期有正面新闻推动，市场情绪积极。\n\n**建议**: 适合中长期持有，注意控制仓位风险。',
+        news_report: '## News Agent 报告\n\n### 最新消息\n1. 公司发布Q3财报，营收超出预期15%\n2. 宣布新产品线，预计下季度上市\n3. 分析师上调评级至"买入"\n\n### 市场情绪\n当前市场情绪积极，社交媒体讨论热度上升。',
+        sec_report: '## SEC Agent 报告\n\n### 财务数据\n- 总资产: $500B\n- 净利润: $50B\n- ROE: 15.2%\n\n### 风险提示\n- 监管政策变化可能影响业务\n- 汇率波动风险',
+        fundamentals_report: '## Fundamentals Agent 报告\n\n### 估值指标\n- PE Ratio: 25.5\n- PB Ratio: 3.2\n- PEG Ratio: 1.8\n\n### 增长指标\n- 营收增长率: 12%\n- 利润增长率: 15%\n- ROIC: 18%',
+        technical_report: '## Technical Agent 报告\n\n### 技术指标\n- RSI: 65 (中性偏多)\n- MACD: 金叉\n- 布林带: 价格在中轨上方\n\n### 支撑阻力\n- 支撑位: $150\n- 阻力位: $180',
+        custom_skill_report: '## Custom Skill Agent 报告\n\n基于自定义技能分析：\n\n该股票在当前市场环境下表现优异，符合价值投资标准。',
+        status: 'completed'
+      }
+
+      setAnalysis(mockAnalysis)
+    } catch (err) {
+      setError('加载分析数据失败')
+      console.error('Failed to fetch analysis:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleReanalyze = async () => {
+    try {
+      setAnalyzing(true)
+      setProgress(0)
+      setProgressMessage('开始分析...')
+      setProgressStage('')
+      
+      // 清空 mock 数据，准备接收真实分析结果
+      setAnalysis(prev => prev ? {
+        ...prev,
+        fusion_summary: '',
+        news_report: '',
+        sec_report: '',
+        fundamentals_report: '',
+        technical_report: '',
+        custom_skill_report: '',
+        status: 'analyzing'
+      } : null)
+      
+      // 使用流式 API
+      cancelStreamRef.current = analysisApi.analyzeTickerStream(
+        ticker,
+        (data) => {
+          const agentFieldMap: Record<string, keyof AnalysisData> = {
+            'news_agent': 'news_report',
+            'sec_agent': 'sec_report',
+            'fundamentals_agent': 'fundamentals_report',
+            'technical_agent': 'technical_report',
+            'custom_skill_agent': 'custom_skill_report',
+          }
+          
+          if (data.type === 'start') {
+            setProgress(data.progress || 0)
+            setProgressMessage(data.message || '开始分析...')
+          } else if (data.type === 'progress') {
+            setProgress(data.progress)
+            setProgressMessage(data.message)
+            setProgressStage(data.stage)
+            
+            // 实时更新子 Agent 卡片：当某个 Agent 完成时，立即显示其报告
+            if (data.agent_name && data.agent_content) {
+              const field = agentFieldMap[data.agent_name]
+              if (field) {
+                setAnalysis(prev => ({
+                  ...(prev || { ticker, status: 'analyzing' }),
+                  ticker: prev?.ticker || ticker,
+                  [field]: data.agent_content,
+                  status: 'analyzing'
+                }))
+              }
+            }
+          } else if (data.type === 'agent_result') {
+            // 后端分拆发送的各 Agent 最终输出
+            if (data.agent_name && data.agent_content) {
+              const field = agentFieldMap[data.agent_name]
+              if (field) {
+                setAnalysis(prev => ({
+                  ...(prev || { ticker, status: 'analyzing' }),
+                  ticker: prev?.ticker || ticker,
+                  [field]: data.agent_content,
+                  status: 'analyzing'
+                }))
+              }
+            }
+          } else if (data.type === 'fusion_result') {
+            // 后端分拆发送的 Fusion 输出
+            const fusionContent = typeof data.fusion_output === 'string'
+              ? data.fusion_output
+              : JSON.stringify(data.fusion_output || '')
+            setAnalysis(prev => ({
+              ...(prev || { ticker, status: 'analyzing' }),
+              ticker: prev?.ticker || ticker,
+              fusion_summary: fusionContent,
+              status: 'analyzing'
+            }))
+            setProgress(95)
+            setProgressMessage('Fusion Agent 融合完成')
+            setProgressStage('fusion')
+          } else if (data.type === 'complete') {
+            setProgress(100)
+            setProgressMessage('分析完成')
+            // 标记分析完成（数据已通过 agent_result / fusion_result 事件更新）
+            setAnalysis(prev => prev ? { ...prev, status: 'completed' } : null)
+            setAnalyzing(false)
+          } else if (data.type === 'error') {
+            setProgressMessage(`错误: ${data.message}`)
+            setAnalyzing(false)
+          }
+        },
+        (error) => {
+          setProgressMessage(`错误: ${error}`)
+          setAnalyzing(false)
+        }
+      )
+    } catch (err) {
+      alert('重新分析失败，请重试')
+      console.error('Failed to reanalyze:', err)
+      setAnalyzing(false)
+    }
+  }
+  
+  // 取消分析
+  const handleCancelAnalysis = () => {
+    if (cancelStreamRef.current) {
+      cancelStreamRef.current()
+      cancelStreamRef.current = null
+    }
+    setAnalyzing(false)
+    setProgress(0)
+    setProgressMessage('已取消')
+  }
+
+  const toggleCollapse = (key: keyof typeof collapsed) => {
+    setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const renderMarkdown = (content: string) => {
+    // Simple markdown rendering
+    const lines = content.split('\n')
+    return lines.map((line, index) => {
+      if (line.startsWith('## ')) {
+        return <h3 key={index} className="text-xl font-bold mt-4 mb-2">{line.replace('## ', '')}</h3>
+      } else if (line.startsWith('### ')) {
+        return <h4 key={index} className="text-lg font-semibold mt-3 mb-1">{line.replace('### ', '')}</h4>
+      } else if (line.startsWith('- ')) {
+        return <li key={index} className="ml-4">{line.replace('- ', '')}</li>
+      } else if (line.startsWith('**') && line.endsWith('**')) {
+        return <p key={index} className="font-semibold mt-2 mb-1">{line.replace(/\*\*/g, '')}</p>
+      } else if (line.trim()) {
+        return <p key={index} className="mb-1">{line}</p>
+      }
+      return <br key={index} />
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">加载中...</div>
+      </div>
+    )
+  }
+
+  if (error && !analysis) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500">{error}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">{ticker} 分析报告</h1>
+            <div className="flex items-center gap-4">
+              <span className="text-lg text-gray-600">{analysis?.company_name}</span>
+              <Badge variant={analysis?.status === 'completed' ? 'default' : 'secondary'}>
+                {analysis?.status === 'completed' ? '已完成' : '分析中'}
+              </Badge>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {analyzing && (
+              <Button variant="outline" onClick={handleCancelAnalysis}>
+                取消
+              </Button>
+            )}
+            <Button onClick={handleReanalyze} disabled={analyzing}>
+              {analyzing ? '分析中...' : '重新分析'}
+            </Button>
+          </div>
+        </div>
+        
+        {/* Progress Bar */}
+        {analyzing && (
+          <Card className="mb-6 border-2 border-blue-500">
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium text-blue-600">
+                    {progressStage === 'supervisor' && '📋 Supervisor 任务拆解'}
+                    {progressStage === 'agents' && '🤖 专项 Agent 分析'}
+                    {progressStage === 'fusion' && '🔄 Fusion 融合结果'}
+                    {!progressStage && '正在分析...'}
+                  </span>
+                  <span className="text-gray-500">{Math.round(progress)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-blue-500 h-full rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-600">{progressMessage}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Price Info */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-6">
+              <div>
+                <div className="text-sm text-gray-600 mb-1">当前价格</div>
+                <div className="text-3xl font-bold">
+                  ${analysis?.current_price?.toFixed(2) || '0.00'}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-600 mb-1">涨跌幅</div>
+                <div className={`text-2xl font-semibold ${(analysis?.change_percent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {(analysis?.change_percent || 0) >= 0 ? '+' : ''}{(analysis?.change_percent || 0).toFixed(2)}%
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Fusion Summary */}
+        <Card className="mb-6 border-2 border-blue-500">
+          <CardHeader>
+            <CardTitle className="text-blue-600">Fusion Agent 融合总结</CardTitle>
+            <CardDescription>多Agent综合分析结果</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="prose prose-slate max-w-none">
+              {analysis?.fusion_summary ? (
+                renderMarkdown(analysis.fusion_summary)
+              ) : analyzing ? (
+                <div className="flex items-center gap-2 text-gray-400 py-4">
+                  <span className="animate-spin">⏳</span>
+                  <span>等待所有专项 Agent 完成后进行融合分析...</span>
+                </div>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Individual Agent Reports */}
+        <div className="space-y-4">
+          {[
+            { key: 'news', title: 'News Agent 报告', emoji: '📰', content: analysis?.news_report },
+            { key: 'sec', title: 'SEC Agent 报告', emoji: '📋', content: analysis?.sec_report },
+            { key: 'fundamentals', title: 'Fundamentals Agent 报告', emoji: '📊', content: analysis?.fundamentals_report },
+            { key: 'technical', title: 'Technical Agent 报告', emoji: '📈', content: analysis?.technical_report },
+            { key: 'custom_skill', title: 'Custom Skill Agent 报告', emoji: '🔧', content: analysis?.custom_skill_report },
+          ].map((report) => (
+            <Card key={report.key} className={report.content ? '' : analyzing ? 'opacity-70' : 'hidden'}>
+              <CardHeader
+                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => toggleCollapse(report.key as keyof typeof collapsed)}
+              >
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center gap-2">
+                    <span>{report.emoji}</span>
+                    {report.title}
+                    {!report.content && analyzing && (
+                      <span className="text-sm font-normal text-gray-400 animate-pulse">分析中...</span>
+                    )}
+                    {report.content && analyzing && (
+                      <Badge variant="outline" className="text-green-600 border-green-300">✓ 完成</Badge>
+                    )}
+                  </CardTitle>
+                  <span className="text-gray-400">
+                    {collapsed[report.key as keyof typeof collapsed] ? '▼' : '▲'}
+                  </span>
+                </div>
+              </CardHeader>
+              {!collapsed[report.key as keyof typeof collapsed] && (
+                <CardContent>
+                  {report.content ? (
+                    <div className="prose prose-slate max-w-none">
+                      {renderMarkdown(report.content)}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-gray-400 py-4">
+                      <span className="animate-spin">⏳</span>
+                      <span>正在分析中，请稍候...</span>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}

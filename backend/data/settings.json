@@ -1,0 +1,52 @@
+{
+  "investment_style": "balanced",
+  "llm_config": {
+    "provider": "openrouter",
+    "model": "qwen/qwen3.6-plus:free",
+    "temperature": 0.7,
+    "max_tokens": 2000
+  },
+  "agent_model_configs": {
+    "supervisor": {
+      "provider": "openai",
+      "model": "kimi-k2.5"
+    },
+    "news": {
+      "provider": "openai",
+      "model": "kimi-k2.5"
+    },
+    "sec": {
+      "provider": "openai",
+      "model": "kimi-k2.5"
+    },
+    "fundamentals": {
+      "provider": "openai",
+      "model": "kimi-k2.5"
+    },
+    "technical": {
+      "provider": "openai",
+      "model": "kimi-k2.5"
+    },
+    "custom_skill": {
+      "provider": "openai",
+      "model": "kimi-k2.5"
+    },
+    "fusion": {
+      "provider": "openai",
+      "model": "kimi-k2.5"
+    }
+  },
+  "agent_skills": {
+    "custom_skill": {
+      "ljg-skills": {
+        "description": "# ljg-skills  我的 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 自定义技能集。  ## 技能  | 技能 | 说明 | |------|------| | **ljg-card** | 内容铸卡 — 将内容转为 PNG 视觉卡片（长图、信息图、海报）。信息图模式会根据内容密度、结构和情绪自动生成独特的视觉构图，没有固定模板，形式服务于内容。 | | **ljg-learn** | 概念解剖 — 从八个方向切开一个概念（历史、辩证、现象、语言、形式、存在、美感、元反思），最后压成一句顿悟。输出 org-",
+        "prompt_injection": "",
+        "source": "github",
+        "source_url": "https://github.com/lijigang/ljg-skills/tree/master/skills/ljg-invest",
+        "installed": true
+      }
+    }
+  },
+  "custom_agents": {},
+  "updated_at": "2026-04-04T07:36:04.317930"
+}

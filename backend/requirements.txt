@@ -1,0 +1,8 @@
+agentscope
+fastapi
+uvicorn
+finnhub-python
+openai
+httpx
+pydantic
+python-dotenv
