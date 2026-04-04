@@ -12,7 +12,9 @@ from pydantic import BaseModel, Field
 from agents.orchestrator import AnalysisOrchestrator
 from storage.settings import SettingsStore
 from storage.analysis import AnalysisStore, AnalysisReport
-from dependencies import get_settings_store, get_analysis_store
+from dependencies import get_settings_store, get_analysis_store, get_analysis_repository
+from services.finnhub_cache_service import FinnhubCacheService
+from services.analysis_report_repository import AnalysisReportRepository
 
 router = APIRouter()
 
