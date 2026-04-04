@@ -11,8 +11,9 @@ import math
 class FinnhubService:
     """Finnhub API 服务类"""
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, db=None):
         self.client = FinnhubClient(api_key=api_key)
+        self.db = db
     
     def _handle_api_error(self, func_name: str, error: Exception) -> Dict[str, Any]:
         """统一处理 API 错误"""
@@ -23,19 +24,27 @@ class FinnhubService:
             "timestamp": datetime.now().isoformat()
         }
     
-    def get_quote(self, ticker: str) -> Dict[str, Any]:
+    def get_quote(self, ticker: str, use_cache: bool = True) -> Dict[str, Any]:
         """
         获取实时报价
-        
+
         Args:
             ticker: 股票代码
-            
+            use_cache: 是否使用缓存
+
         Returns:
             包含报价信息的字典
         """
+        if use_cache and self.db:
+            from services.finnhub_cache_service import FinnhubCacheService
+            cache_service = FinnhubCacheService(self.db)
+            cached = cache_service.get_cache("quote", ticker)
+            if cached:
+                return cached
+
         try:
             quote = self.client.quote(ticker)
-            return {
+            result = {
                 "success": True,
                 "ticker": ticker,
                 "current_price": quote.get("c"),
@@ -47,22 +56,37 @@ class FinnhubService:
                 "previous_close": quote.get("pc"),
                 "timestamp": datetime.now().isoformat()
             }
+
+            if self.db:
+                from services.finnhub_cache_service import FinnhubCacheService
+                cache_service = FinnhubCacheService(self.db)
+                cache_service.set_cache("quote", ticker, result)
+
+            return result
         except Exception as e:
             return self._handle_api_error("get_quote", e)
     
-    def get_company_profile(self, ticker: str) -> Dict[str, Any]:
+    def get_company_profile(self, ticker: str, use_cache: bool = True) -> Dict[str, Any]:
         """
         获取公司概况
-        
+
         Args:
             ticker: 股票代码
-            
+            use_cache: 是否使用缓存
+
         Returns:
             包含公司信息的字典
         """
+        if use_cache and self.db:
+            from services.finnhub_cache_service import FinnhubCacheService
+            cache_service = FinnhubCacheService(self.db)
+            cached = cache_service.get_cache("company_profile", ticker)
+            if cached:
+                return cached
+
         try:
             profile = self.client.company_profile2(symbol=ticker)
-            return {
+            result = {
                 "success": True,
                 "ticker": ticker,
                 "company_name": profile.get("name"),
@@ -76,24 +100,39 @@ class FinnhubService:
                 "logo": profile.get("logo"),
                 "timestamp": datetime.now().isoformat()
             }
+
+            if self.db:
+                from services.finnhub_cache_service import FinnhubCacheService
+                cache_service = FinnhubCacheService(self.db)
+                cache_service.set_cache("company_profile", ticker, result)
+
+            return result
         except Exception as e:
             return self._handle_api_error("get_company_profile", e)
     
-    def get_financials(self, ticker: str) -> Dict[str, Any]:
+    def get_financials(self, ticker: str, use_cache: bool = True) -> Dict[str, Any]:
         """
         获取基本面数据
-        
+
         Args:
             ticker: 股票代码
-            
+            use_cache: 是否使用缓存
+
         Returns:
             包含财务数据的字典
         """
+        if use_cache and self.db:
+            from services.finnhub_cache_service import FinnhubCacheService
+            cache_service = FinnhubCacheService(self.db)
+            cached = cache_service.get_cache("financials", ticker)
+            if cached:
+                return cached
+
         try:
             financials = self.client.company_basic_financials(ticker, "all")
             metric = financials.get("metric", {})
-            
-            return {
+
+            result = {
                 "success": True,
                 "ticker": ticker,
                 "pe_ratio": metric.get("peBasicExclExtraTTM"),
@@ -110,30 +149,45 @@ class FinnhubService:
                 "earnings_growth": metric.get("epsGrowth5Y"),
                 "timestamp": datetime.now().isoformat()
             }
+
+            if self.db:
+                from services.finnhub_cache_service import FinnhubCacheService
+                cache_service = FinnhubCacheService(self.db)
+                cache_service.set_cache("financials", ticker, result)
+
+            return result
         except Exception as e:
             return self._handle_api_error("get_financials", e)
     
-    def get_company_news(self, ticker: str, from_date: Optional[str] = None, 
-                        to_date: Optional[str] = None) -> Dict[str, Any]:
+    def get_company_news(self, ticker: str, from_date: Optional[str] = None,
+                          to_date: Optional[str] = None, use_cache: bool = True) -> Dict[str, Any]:
         """
         获取公司新闻
-        
+
         Args:
             ticker: 股票代码
             from_date: 开始日期 (YYYY-MM-DD)，默认为7天前
             to_date: 结束日期 (YYYY-MM-DD)，默认为今天
-            
+            use_cache: 是否使用缓存
+
         Returns:
             包含新闻列表的字典
         """
+        if use_cache and self.db:
+            from services.finnhub_cache_service import FinnhubCacheService
+            cache_service = FinnhubCacheService(self.db)
+            cached = cache_service.get_cache("company_news", ticker)
+            if cached:
+                return cached
+
         try:
             if not from_date:
                 from_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
             if not to_date:
                 to_date = datetime.now().strftime("%Y-%m-%d")
-            
+
             news = self.client.company_news(ticker, _from=from_date, to=to_date)
-            
+
             news_list = []
             for item in news[:10]:  # 限制返回10条新闻
                 news_list.append({
@@ -144,8 +198,8 @@ class FinnhubService:
                     "datetime": datetime.fromtimestamp(item.get("datetime", 0)).isoformat() if item.get("datetime") else None,
                     "related_symbols": item.get("related", [])
                 })
-            
-            return {
+
+            result = {
                 "success": True,
                 "ticker": ticker,
                 "news": news_list,
@@ -154,6 +208,13 @@ class FinnhubService:
                 "count": len(news_list),
                 "timestamp": datetime.now().isoformat()
             }
+
+            if self.db:
+                from services.finnhub_cache_service import FinnhubCacheService
+                cache_service = FinnhubCacheService(self.db)
+                cache_service.set_cache("company_news", ticker, result)
+
+            return result
         except Exception as e:
             return self._handle_api_error("get_company_news", e)
     
@@ -231,43 +292,51 @@ class FinnhubService:
             "lower": round(sma - std_dev * std, 2)
         }
     
-    def get_technical_indicators(self, ticker: str) -> Dict[str, Any]:
+    def get_technical_indicators(self, ticker: str, use_cache: bool = True) -> Dict[str, Any]:
         """
         获取技术指标（RSI、MACD、布林带）
-        
+
         Args:
             ticker: 股票代码
-            
+            use_cache: 是否使用缓存
+
         Returns:
             包含技术指标的字典
         """
+        if use_cache and self.db:
+            from services.finnhub_cache_service import FinnhubCacheService
+            cache_service = FinnhubCacheService(self.db)
+            cached = cache_service.get_cache("technical_indicators", ticker)
+            if cached:
+                return cached
+
         try:
             # 获取最近50天的蜡烛图数据
             end_date = int(datetime.now().timestamp())
             start_date = int((datetime.now() - timedelta(days=60)).timestamp())
-            
+
             candles = self.client.stock_candles(
-                ticker, 
-                "D", 
-                start_date, 
+                ticker,
+                "D",
+                start_date,
                 end_date
             )
-            
+
             if candles.get("s") != "ok" or not candles.get("c"):
                 return {
                     "success": False,
                     "error": "Unable to fetch candle data",
                     "ticker": ticker
                 }
-            
+
             close_prices = candles["c"]
-            
+
             # 计算各项指标
             rsi = self._calculate_rsi(close_prices)
             macd = self._calculate_macd(close_prices)
             bollinger = self._calculate_bollinger_bands(close_prices)
-            
-            return {
+
+            result = {
                 "success": True,
                 "ticker": ticker,
                 "current_price": close_prices[-1],
@@ -277,5 +346,12 @@ class FinnhubService:
                 "rsi_signal": "overbought" if rsi > 70 else "oversold" if rsi < 30 else "neutral",
                 "timestamp": datetime.now().isoformat()
             }
+
+            if self.db:
+                from services.finnhub_cache_service import FinnhubCacheService
+                cache_service = FinnhubCacheService(self.db)
+                cache_service.set_cache("technical_indicators", ticker, result)
+
+            return result
         except Exception as e:
             return self._handle_api_error("get_technical_indicators", e)
