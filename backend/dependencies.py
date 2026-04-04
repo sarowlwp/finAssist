@@ -15,19 +15,22 @@ _portfolio_store: Optional[PortfolioStore] = None
 _settings_store: Optional[SettingsStore] = None
 _finnhub_service: Optional[FinnhubService] = None
 _model_adapter: Optional[ModelAdapter] = None
+_last_data_dir: Optional[Path] = None
 
 def get_portfolio_store() -> PortfolioStore:
-    """获取 PortfolioStore 单例"""
-    global _portfolio_store
-    if _portfolio_store is None:
+    """获取 PortfolioStore 实例"""
+    global _portfolio_store, _last_data_dir
+    if _portfolio_store is None or _last_data_dir != config.DATA_DIR:
         _portfolio_store = PortfolioStore(config.DATA_DIR)
+        _last_data_dir = config.DATA_DIR
     return _portfolio_store
 
 def get_settings_store() -> SettingsStore:
-    """获取 SettingsStore 单例"""
-    global _settings_store
-    if _settings_store is None:
+    """获取 SettingsStore 实例"""
+    global _settings_store, _last_data_dir
+    if _settings_store is None or _last_data_dir != config.DATA_DIR:
         _settings_store = SettingsStore(config.DATA_DIR)
+        _last_data_dir = config.DATA_DIR
     return _settings_store
 
 def get_finnhub_service() -> Optional[FinnhubService]:

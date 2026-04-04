@@ -24,6 +24,10 @@ export default defineConfig({
     },
   ],
 
-  // We won't use the webServer since we'll assume the backend/frontend is running
-  // or we'll mock the API endpoints
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  },
 });

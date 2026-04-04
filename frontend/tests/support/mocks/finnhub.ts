@@ -1,6 +1,7 @@
 import { Page } from '@playwright/test';
 
 export function mockFinnhubAPI(page: Page) {
+  // Mock Finnhub external API
   page.route('https://finnhub.io/api/v1/*', async (route) => {
     const url = route.request().url();
 
@@ -50,5 +51,25 @@ export function mockFinnhubAPI(page: Page) {
         json: { error: 'Not found' }
       });
     }
+  });
+
+  // Mock local market API endpoints
+  page.route('**/api/market/quote/*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        price: 150.00,
+        change_percent: 0.67
+      }
+    });
+  });
+
+  page.route('**/api/market/profile/*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        company_name: 'Apple Inc.'
+      }
+    });
   });
 }
