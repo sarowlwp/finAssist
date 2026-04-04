@@ -1,11 +1,17 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { marketApi, analysisApi } from '@/lib/api'
+
+// 导入 SSE 事件类型（从 lib/api 复制或重新定义）
+interface StreamEvent {
+  type: 'start' | 'progress' | 'agent_result' | 'fusion_result' | 'complete' | 'error';
+  [key: string]: any;
+}
 
 interface AnalysisData {
   ticker: string
@@ -28,13 +34,13 @@ export default function AnalysisPage() {
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null)
   const [error, setError] = useState<string | null>(null)
-  
+
   // 流式分析进度
   const [progress, setProgress] = useState(0)
   const [progressMessage, setProgressMessage] = useState('')
   const [progressStage, setProgressStage] = useState('')
   const cancelStreamRef = useRef<(() => void) | null>(null)
-  
+
   // Collapsed state for each agent report
   const [collapsed, setCollapsed] = useState({
     news: false,
@@ -44,53 +50,15 @@ export default function AnalysisPage() {
     custom_skill: false
   })
 
-  useEffect(() => {
-    fetchAnalysis()
-  }, [ticker])
-
-  const fetchAnalysis = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      // Fetch market data
-      const [profileData, quoteData] = await Promise.all([
-        marketApi.getProfile(ticker).catch(() => null),
-        marketApi.getQuote(ticker).catch(() => null)
-      ])
-
-      // Mock analysis data if API fails
-      const mockAnalysis: AnalysisData = {
-        ticker,
-        company_name: profileData?.company_name || `${ticker} 公司`,
-        current_price: quoteData?.price || 0,
-        change_percent: quoteData?.change_percent || 0,
-        fusion_summary: '## 融合分析总结\n\n基于多Agent的综合分析，该股票当前呈现以下特征：\n\n**技术面**: 价格处于上升趋势，MACD金叉信号明确。\n\n**基本面**: 财务状况良好，营收增长稳健。\n\n**消息面**: 近期有正面新闻推动，市场情绪积极。\n\n**建议**: 适合中长期持有，注意控制仓位风险。',
-        news_report: '## News Agent 报告\n\n### 最新消息\n1. 公司发布Q3财报，营收超出预期15%\n2. 宣布新产品线，预计下季度上市\n3. 分析师上调评级至"买入"\n\n### 市场情绪\n当前市场情绪积极，社交媒体讨论热度上升。',
-        sec_report: '## SEC Agent 报告\n\n### 财务数据\n- 总资产: $500B\n- 净利润: $50B\n- ROE: 15.2%\n\n### 风险提示\n- 监管政策变化可能影响业务\n- 汇率波动风险',
-        fundamentals_report: '## Fundamentals Agent 报告\n\n### 估值指标\n- PE Ratio: 25.5\n- PB Ratio: 3.2\n- PEG Ratio: 1.8\n\n### 增长指标\n- 营收增长率: 12%\n- 利润增长率: 15%\n- ROIC: 18%',
-        technical_report: '## Technical Agent 报告\n\n### 技术指标\n- RSI: 65 (中性偏多)\n- MACD: 金叉\n- 布林带: 价格在中轨上方\n\n### 支撑阻力\n- 支撑位: $150\n- 阻力位: $180',
-        custom_skill_report: '## Custom Skill Agent 报告\n\n基于自定义技能分析：\n\n该股票在当前市场环境下表现优异，符合价值投资标准。',
-        status: 'completed'
-      }
-
-      setAnalysis(mockAnalysis)
-    } catch (err) {
-      setError('加载分析数据失败')
-      console.error('Failed to fetch analysis:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleReanalyze = async () => {
+  // Handle reanalyze with useCallback to fix dependency issues
+  const handleReanalyze = useCallback(() => {
     try {
       setAnalyzing(true)
       setProgress(0)
       setProgressMessage('开始分析...')
       setProgressStage('')
-      
-      // 清空 mock 数据，准备接收真实分析结果
+
+      // 清空之前的分析结果，准备接收新的分析结果
       setAnalysis(prev => prev ? {
         ...prev,
         fusion_summary: '',
@@ -101,11 +69,11 @@ export default function AnalysisPage() {
         custom_skill_report: '',
         status: 'analyzing'
       } : null)
-      
+
       // 使用流式 API
       cancelStreamRef.current = analysisApi.analyzeTickerStream(
         ticker,
-        (data) => {
+        (data: StreamEvent) => {
           const agentFieldMap: Record<string, keyof AnalysisData> = {
             'news_agent': 'news_report',
             'sec_agent': 'sec_report',
@@ -113,7 +81,7 @@ export default function AnalysisPage() {
             'technical_agent': 'technical_report',
             'custom_skill_agent': 'custom_skill_report',
           }
-          
+
           if (data.type === 'start') {
             setProgress(data.progress || 0)
             setProgressMessage(data.message || '开始分析...')
@@ -121,7 +89,7 @@ export default function AnalysisPage() {
             setProgress(data.progress)
             setProgressMessage(data.message)
             setProgressStage(data.stage)
-            
+
             // 实时更新子 Agent 卡片：当某个 Agent 完成时，立即显示其报告
             if (data.agent_name && data.agent_content) {
               const field = agentFieldMap[data.agent_name]
@@ -182,7 +150,7 @@ export default function AnalysisPage() {
       console.error('Failed to reanalyze:', err)
       setAnalyzing(false)
     }
-  }
+  }, [ticker])
   
   // 取消分析
   const handleCancelAnalysis = () => {
@@ -194,6 +162,50 @@ export default function AnalysisPage() {
     setProgress(0)
     setProgressMessage('已取消')
   }
+
+  // Fetch analysis data on load
+  const fetchAnalysis = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch market data
+      const [profileData, quoteData] = await Promise.all([
+        marketApi.getProfile(ticker).catch(() => null),
+        marketApi.getQuote(ticker).catch(() => null)
+      ])
+
+      // Initialize analysis data with market data only
+      const initialAnalysis: AnalysisData = {
+        ticker,
+        company_name: profileData?.company_name || `${ticker} 公司`,
+        current_price: quoteData?.price || 0,
+        change_percent: quoteData?.change_percent || 0,
+        fusion_summary: '',
+        news_report: '',
+        sec_report: '',
+        fundamentals_report: '',
+        technical_report: '',
+        custom_skill_report: '',
+        status: 'pending'
+      }
+
+      setAnalysis(initialAnalysis)
+
+      // Start analysis immediately
+      handleReanalyze()
+    } catch (err) {
+      setError('加载分析数据失败')
+      console.error('Failed to fetch analysis:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [ticker, handleReanalyze])
+
+  // Load data on initial render
+  useEffect(() => {
+    fetchAnalysis()
+  }, [fetchAnalysis])
 
   const toggleCollapse = (key: keyof typeof collapsed) => {
     setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))

@@ -3,6 +3,7 @@
 """
 import json
 import asyncio
+import uuid
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
@@ -10,7 +11,8 @@ from pydantic import BaseModel, Field
 
 from agents.orchestrator import AnalysisOrchestrator
 from storage.settings import SettingsStore
-from dependencies import get_settings_store
+from storage.analysis import AnalysisStore, AnalysisReport
+from dependencies import get_settings_store, get_analysis_store
 
 router = APIRouter()
 
@@ -296,7 +298,8 @@ async def get_analysis_status(analysis_id: str):
 @router.post("/analysis/ticker/stream")
 async def analyze_ticker_stream(
     request: TickerAnalysisRequest,
-    settings_store: SettingsStore = Depends(get_settings_store)
+    settings_store: SettingsStore = Depends(get_settings_store),
+    analysis_store: AnalysisStore = Depends(get_analysis_store)
 ):
     """
     流式分析单个股票 (Server-Sent Events)
@@ -312,7 +315,11 @@ async def analyze_ticker_stream(
     """
     async def event_generator():
         progress_queue: asyncio.Queue = asyncio.Queue()
-        
+        report_id = str(uuid.uuid4())
+
+        import logging
+        logger = logging.getLogger("analysis_stream")
+
         try:
             # 发送初始状态
             yield f"data: {json.dumps({'type': 'start', 'ticker': request.ticker, 'progress': 0, 'message': '开始分析...'})}\n\n"
@@ -412,6 +419,32 @@ async def analyze_ticker_stream(
                 yield f"data: {json.dumps({'type': 'error', 'message': error}, ensure_ascii=False)}\n\n"
             elif result:
                 try:
+                    # 保存分析报告
+                    try:
+                        # 从result中提取各个agent的输出
+                        agent_outputs = result.get('agent_outputs', {})
+                        metadata = result.get('metadata', {})
+                        quote_data = metadata.get('quote', {})
+
+                        report = AnalysisReport(
+                            report_id=report_id,
+                            ticker=request.ticker,
+                            company_name=metadata.get('company_name', request.ticker),
+                            status='completed',
+                            current_price=quote_data.get('current_price', 0),
+                            change_percent=quote_data.get('change_percent', 0),
+                            fusion_summary=result.get('fusion_output', ''),
+                            news_report=agent_outputs.get('news_agent', ''),
+                            sec_report=agent_outputs.get('sec_agent', ''),
+                            fundamentals_report=agent_outputs.get('fundamentals_agent', ''),
+                            technical_report=agent_outputs.get('technical_agent', ''),
+                            custom_skill_report=agent_outputs.get('custom_skill_agent', '')
+                        )
+                        analysis_store.save_report(report)
+                        logger.info(f"分析报告已保存: {report_id}")
+                    except Exception as save_err:
+                        logger.error(f"保存分析报告失败: {save_err}")
+
                     # 先逐个发送各 Agent 的输出
                     agent_outputs = result.get('agent_outputs', {})
                     for agent_name, agent_content in agent_outputs.items():
@@ -421,7 +454,15 @@ async def analyze_ticker_stream(
                     yield f"data: {json.dumps({'type': 'fusion_result', 'fusion_output': result.get('fusion_output', '')}, ensure_ascii=False)}\n\n"
                     
                     # 最后发送 complete 信号（不含大文本，只含元数据）
-                    yield f"data: {json.dumps({'type': 'complete', 'progress': 100, 'ticker': result.get('ticker', ''), 'investment_style': result.get('investment_style', ''), 'metadata': result.get('metadata', {})}, ensure_ascii=False)}\n\n"
+                    complete_data = {
+                        'type': 'complete',
+                        'progress': 100,
+                        'ticker': result.get('ticker', ''),
+                        'investment_style': result.get('investment_style', ''),
+                        'metadata': result.get('metadata', {}),
+                        'report_id': report_id
+                    }
+                    yield f"data: {json.dumps(complete_data, ensure_ascii=False)}\n\n"
                 except Exception as e:
                     logger.exception(f"[SSE] 发送最终结果失败: {e}")
                     yield f"data: {json.dumps({'type': 'error', 'message': f'结果序列化失败: {str(e)}'}, ensure_ascii=False)}\n\n"
@@ -441,3 +482,98 @@ async def analyze_ticker_stream(
             "X-Accel-Buffering": "no"
         }
     )
+
+
+@router.get("/analysis/reports", response_model=List[AnalysisReport])
+async def get_analysis_reports(
+    ticker: Optional[str] = None,
+    limit: int = 20,
+    analysis_store: AnalysisStore = Depends(get_analysis_store)
+):
+    """
+    获取分析报告列表
+
+    Args:
+        ticker: 可选的股票代码，为空则返回所有报告
+        limit: 返回的报告数量限制
+        analysis_store: 分析报告存储
+
+    Returns:
+        分析报告列表
+    """
+    try:
+        if ticker:
+            reports = analysis_store.load_by_ticker(ticker)
+        else:
+            reports = analysis_store.get_recent_reports(limit)
+
+        return reports
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取分析报告失败: {str(e)}"
+        )
+
+
+@router.get("/analysis/reports/{report_id}", response_model=AnalysisReport)
+async def get_analysis_report(
+    report_id: str,
+    analysis_store: AnalysisStore = Depends(get_analysis_store)
+):
+    """
+    获取单个分析报告详情
+
+    Args:
+        report_id: 报告ID
+        analysis_store: 分析报告存储
+
+    Returns:
+        分析报告详情
+    """
+    try:
+        report = analysis_store.load_by_id(report_id)
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"未找到报告: {report_id}"
+            )
+        return report
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取分析报告失败: {str(e)}"
+        )
+
+
+@router.delete("/analysis/reports/{report_id}")
+async def delete_analysis_report(
+    report_id: str,
+    analysis_store: AnalysisStore = Depends(get_analysis_store)
+):
+    """
+    删除分析报告
+
+    Args:
+        report_id: 报告ID
+        analysis_store: 分析报告存储
+
+    Returns:
+        删除结果
+    """
+    try:
+        deleted = analysis_store.delete_report(report_id)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"未找到报告: {report_id}"
+            )
+        return {"success": True, "message": "报告已删除"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除分析报告失败: {str(e)}"
+        )

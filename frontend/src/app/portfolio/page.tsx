@@ -104,7 +104,7 @@ export default function PortfolioPage() {
     }
 
     try {
-      await portfolioApi.remove(ticker)
+      await portfolioApi.delete(ticker)
       await fetchPortfolio()
     } catch (err) {
       alert('删除失败，请重试')
