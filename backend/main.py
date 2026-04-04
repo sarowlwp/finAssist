@@ -38,13 +38,24 @@ app.include_router(market.router, prefix="/api", tags=["Market"])
 async def startup_event():
     """应用启动时初始化"""
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)
-    
+
+    # 初始化数据库
+    from database import Base, engine
+    from services.finnhub_cache_service import FinnhubCacheService
+    from database import get_db
+
+    Base.metadata.create_all(bind=engine)
+
+    db = next(get_db())
+    cache_service = FinnhubCacheService(db)
+    cache_service.delete_expired_cache()
+
     # 从持久化存储中加载用户自定义 Agent
     from storage.settings import SettingsStore
     from agents.analysis_agent import load_custom_agents_from_settings
     settings_store = SettingsStore(config.DATA_DIR)
     load_custom_agents_from_settings(settings_store)
-    
+
     print("✅ Backend started successfully on port 8001")
 
 
