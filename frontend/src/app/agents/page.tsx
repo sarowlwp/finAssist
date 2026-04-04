@@ -71,7 +71,12 @@ export default function AgentsPage() {
   const [loadingAgents, setLoadingAgents] = useState(true)
   const [selectedAgent, setSelectedAgent] = useState('supervisor')
   const [messages, setMessages] = useState<Message[]>([])
-  const [agentHistory, setAgentHistory] = useState<Record<string, Message[]>>(loadHistoryFromStorage)
+  const [agentHistory, setAgentHistory] = useState<Record<string, Message[]>>({})
+
+  // Load history from localStorage on mount
+  useEffect(() => {
+    setAgentHistory(loadHistoryFromStorage())
+  }, [])
   const [inputMessage, setInputMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [modelConfig, setModelConfig] = useState({
@@ -345,46 +350,46 @@ export default function AgentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Agent 调试</h1>
+        <h1 className="text-2xl font-bold mb-4">Agent 调试</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Agent List */}
           <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle>Agent 列表</CardTitle>
-              <CardDescription>选择要调试的 Agent</CardDescription>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">Agent 列表</CardTitle>
+              <CardDescription className="text-sm">选择要调试的 Agent</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0 px-4 pb-4">
               {loadingAgents ? (
-                <div className="text-center py-4 text-gray-400">加载中...</div>
+                <div className="text-center py-3 text-gray-400 dark:text-gray-500">加载中...</div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {agents.map((agent) => (
                     <div key={agent.name} className="relative group">
                       <button
                         onClick={() => setSelectedAgent(agent.name)}
-                        className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                        className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
                           selectedAgent === agent.name
                             ? 'bg-blue-500 text-white'
-                            : 'bg-white hover:bg-slate-50'
+                            : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{agent.name}</span>
+                          <span className="font-medium text-sm">{agent.name}</span>
                           {!agent.builtin && (
                             <Badge variant="secondary" className="text-xs">自定义</Badge>
                           )}
                         </div>
-                        <div className={`text-sm ${selectedAgent === agent.name ? 'text-blue-100' : 'text-gray-500'}`}>
+                        <div className={`text-xs ${selectedAgent === agent.name ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
                           {agent.description}
                         </div>
                       </button>
                       {!agent.builtin && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteAgent(agent.name) }}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 text-sm px-1.5 py-0.5 rounded hover:bg-red-50"
+                          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 text-xs px-1.5 py-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30"
                           title="删除 Agent"
                         >
                           ✕
@@ -396,11 +401,12 @@ export default function AgentsPage() {
               )}
 
               {/* 新增 Agent 按钮 */}
-              <div className="mt-4 pt-4 border-t">
+              <div className="mt-3 pt-3 border-t dark:border-gray-700">
                 <Button
                   onClick={() => setShowCreateAgent(true)}
                   variant="outline"
                   className="w-full"
+                  size="sm"
                 >
                   + 新增 Agent
                 </Button>
@@ -410,11 +416,11 @@ export default function AgentsPage() {
 
           {/* Chat Interface */}
           <Card className="lg:col-span-3">
-            <CardHeader>
+            <CardHeader className="py-3 px-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>{selectedAgent} 聊天</CardTitle>
-                  <CardDescription>与 Agent 进行交互调试</CardDescription>
+                  <CardTitle className="text-lg">{selectedAgent} 聊天</CardTitle>
+                  <CardDescription className="text-sm">与 Agent 进行交互调试</CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -435,12 +441,12 @@ export default function AgentsPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0 px-4 pb-4">
               {/* Model Config */}
-              <div className="mb-4 p-4 bg-slate-50 rounded-lg">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="mb-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Provider</label>
+                    <label className="block text-sm font-medium mb-1.5">Provider</label>
                     <Select
                       options={PROVIDER_OPTIONS}
                       value={modelConfig.provider}
@@ -448,7 +454,7 @@ export default function AgentsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Model</label>
+                    <label className="block text-sm font-medium mb-1.5">Model</label>
                     <Input
                       type="text"
                       value={modelConfig.model}
@@ -457,7 +463,7 @@ export default function AgentsPage() {
                     />
                   </div>
                 </div>
-                <div className="mt-4 flex justify-end">
+                <div className="mt-3 flex justify-end">
                   <Button
                     onClick={() => saveAgentModelConfig(modelConfig)}
                     variant="outline"
@@ -469,23 +475,23 @@ export default function AgentsPage() {
               </div>
 
               {/* Messages */}
-              <div className="h-96 overflow-y-auto mb-4 p-4 bg-white rounded-lg border">
+              <div className="h-80 overflow-y-auto mb-3 p-3 bg-white dark:bg-slate-800 rounded-lg border dark:border-gray-700">
                 {messages.length === 0 ? (
-                  <div className="text-center text-gray-400 py-8">
+                  <div className="text-center text-gray-400 dark:text-gray-500 py-6">
                     开始与 {selectedAgent} 对话
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {messages.map((msg, index) => (
                       <div
                         key={index}
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[70%] px-4 py-2 rounded-lg ${
+                          className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${
                             msg.role === 'user'
                               ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-800'
+                              : 'bg-gray-100 text-gray-800 dark:bg-slate-700 dark:text-gray-200'
                           }`}
                         >
                           <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -513,12 +519,13 @@ export default function AgentsPage() {
                     }
                   }}
                   rows={2}
-                  className="flex-1"
+                  className="flex-1 text-sm"
                 />
                 <Button
                   onClick={handleSendMessage}
                   disabled={sending || !inputMessage.trim()}
                   className="self-end"
+                  size="sm"
                 >
                   {sending ? '发送中...' : '发送'}
                 </Button>
@@ -528,31 +535,31 @@ export default function AgentsPage() {
         </div>
 
         {/* Skills Management */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>已安装技能</CardTitle>
-            <CardDescription>管理 {selectedAgent} 的技能</CardDescription>
+        <Card className="mt-4">
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-lg">已安装技能</CardTitle>
+            <CardDescription className="text-sm">管理 {selectedAgent} 的技能</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 px-4 pb-4">
             {loadingSkills ? (
-              <div className="text-center py-4">加载中...</div>
+              <div className="text-center py-3">加载中...</div>
             ) : skills.length === 0 ? (
-              <div className="text-center py-4 text-gray-500">暂无已安装的技能</div>
+              <div className="text-center py-3 text-gray-500 dark:text-gray-400">暂无已安装的技能</div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {skills.map((skill) => (
                   <div
                     key={skill.name}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                    className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{skill.name}</span>
-                        <Badge variant={skill.source === 'github' ? 'default' : 'secondary'}>
+                        <span className="font-medium text-sm">{skill.name}</span>
+                        <Badge variant={skill.source === 'github' ? 'default' : 'secondary'} className="text-xs">
                           {skill.source === 'github' ? 'GitHub' : '手动创建'}
                         </Badge>
                       </div>
-                      <div className="text-sm text-gray-600 truncate">{skill.description}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{skill.description}</div>
                       {skill.source_url && (
                         <div className="text-xs text-blue-500 truncate mt-0.5">{skill.source_url}</div>
                       )}
@@ -560,7 +567,7 @@ export default function AgentsPage() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="ml-4 shrink-0"
+                      className="ml-2 shrink-0"
                       onClick={() => handleUninstallSkill(skill.name)}
                     >
                       卸载

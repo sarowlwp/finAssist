@@ -141,39 +141,39 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">投资仪表盘</h1>
-        
+        <h1 className="text-2xl font-bold mb-4">投资仪表盘</h1>
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>总市值</CardDescription>
-              <CardTitle className="text-2xl">{formatCurrency(summary?.total_market_value || 0)}</CardTitle>
+            <CardHeader className="pb-2 px-4 py-3">
+              <CardDescription className="text-sm">总市值</CardDescription>
+              <CardTitle className="text-xl">{formatCurrency(summary?.total_market_value || 0)}</CardTitle>
             </CardHeader>
           </Card>
-          
+
           <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>总成本</CardDescription>
-              <CardTitle className="text-2xl">{formatCurrency(summary?.total_cost || 0)}</CardTitle>
+            <CardHeader className="pb-2 px-4 py-3">
+              <CardDescription className="text-sm">总成本</CardDescription>
+              <CardTitle className="text-xl">{formatCurrency(summary?.total_cost || 0)}</CardTitle>
             </CardHeader>
           </Card>
-          
+
           <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>总盈亏</CardDescription>
-              <CardTitle className={`text-2xl ${(summary?.total_profit_loss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <CardHeader className="pb-2 px-4 py-3">
+              <CardDescription className="text-sm">总盈亏</CardDescription>
+              <CardTitle className={`text-xl ${(summary?.total_profit_loss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatCurrency(summary?.total_profit_loss || 0)}
               </CardTitle>
             </CardHeader>
           </Card>
-          
+
           <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>盈亏率</CardDescription>
-              <CardTitle className={`text-2xl ${(summary?.total_profit_loss_percent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <CardHeader className="pb-2 px-4 py-3">
+              <CardDescription className="text-sm">盈亏率</CardDescription>
+              <CardTitle className={`text-xl ${(summary?.total_profit_loss_percent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatPercent(summary?.total_profit_loss_percent || 0)}
               </CardTitle>
             </CardHeader>
@@ -181,15 +181,15 @@ export default function DashboardPage() {
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
           {/* Pie Chart */}
           <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle>持仓分布</CardTitle>
-              <CardDescription>按市值分布</CardDescription>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">持仓分布</CardTitle>
+              <CardDescription className="text-sm">按市值分布</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="h-64">
+            <CardContent className="pt-0 px-4 pb-4">
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -215,38 +215,38 @@ export default function DashboardPage() {
 
           {/* Portfolio Table */}
           <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>持仓列表</CardTitle>
-              <CardDescription>当前所有持仓</CardDescription>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">持仓列表</CardTitle>
+              <CardDescription className="text-sm">当前所有持仓</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0 px-4 pb-4">
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-2">代码</th>
-                      <th className="text-right py-3 px-2">数量</th>
-                      <th className="text-right py-3 px-2">成本价</th>
-                      <th className="text-right py-3 px-2">当前价</th>
-                      <th className="text-right py-3 px-2">盈亏</th>
-                      <th className="text-right py-3 px-2">盈亏率</th>
-                      <th className="text-center py-3 px-2">操作</th>
+                    <tr className="border-b dark:border-gray-700">
+                      <th className="text-left py-2 px-2">代码</th>
+                      <th className="text-right py-2 px-2">数量</th>
+                      <th className="text-right py-2 px-2">成本价</th>
+                      <th className="text-right py-2 px-2">当前价</th>
+                      <th className="text-right py-2 px-2">盈亏</th>
+                      <th className="text-right py-2 px-2">盈亏率</th>
+                      <th className="text-center py-2 px-2">操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     {portfolio.map((item) => (
-                      <tr key={item.ticker} className="border-b hover:bg-slate-50">
-                        <td className="py-3 px-2 font-medium">{item.ticker}</td>
-                        <td className="text-right py-3 px-2">{item.quantity}</td>
-                        <td className="text-right py-3 px-2">{formatCurrency(item.avg_cost)}</td>
-                        <td className="text-right py-3 px-2">{formatCurrency(item.current_price || 0)}</td>
-                        <td className={`text-right py-3 px-2 ${(item.profit_loss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <tr key={item.ticker} className="border-b dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-slate-800">
+                        <td className="py-2 px-2 font-medium">{item.ticker}</td>
+                        <td className="text-right py-2 px-2">{item.quantity}</td>
+                        <td className="text-right py-2 px-2">{formatCurrency(item.avg_cost)}</td>
+                        <td className="text-right py-2 px-2">{formatCurrency(item.current_price || 0)}</td>
+                        <td className={`text-right py-2 px-2 ${(item.profit_loss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {formatCurrency(item.profit_loss || 0)}
                         </td>
-                        <td className={`text-right py-3 px-2 ${(item.profit_loss_percent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <td className={`text-right py-2 px-2 ${(item.profit_loss_percent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {formatPercent(item.profit_loss_percent || 0)}
                         </td>
-                        <td className="text-center py-3 px-2">
+                        <td className="text-center py-2 px-2">
                           <Link href={`/analysis/${item.ticker}`}>
                             <Button variant="outline" size="sm">
                               分析

@@ -56,3 +56,20 @@ class AgentReport(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     analysis_report = relationship("AnalysisReport", back_populates="agent_reports")
+
+
+class PortfolioHolding(Base):
+    """
+    持仓数据模型
+
+    存储用户的股票持仓信息，包括成本价、数量、备注等。
+    """
+    __tablename__ = "portfolio_holdings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticker = Column(String(20), index=True, unique=True, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    cost_price = Column(DECIMAL(15, 4), nullable=False)
+    note = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

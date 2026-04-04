@@ -15,12 +15,10 @@ from storage.portfolio import PortfolioStore
 from storage.settings import SettingsStore
 
 # 全局单例实例
-_portfolio_store: Optional[PortfolioStore] = None
 _settings_store: Optional[SettingsStore] = None
 _analysis_store: Optional[AnalysisStore] = None
 _finnhub_service: Optional[FinnhubService] = None
 _model_adapter: Optional[ModelAdapter] = None
-_portfolio_data_dir: Optional[Path] = None
 _settings_data_dir: Optional[Path] = None
 _analysis_data_dir: Optional[Path] = None
 
@@ -38,13 +36,9 @@ def get_analysis_store() -> AnalysisStore:
         _analysis_data_dir = config.DATA_DIR
     return _analysis_store
 
-def get_portfolio_store() -> PortfolioStore:
-    """获取 PortfolioStore 实例"""
-    global _portfolio_store, _portfolio_data_dir
-    if _portfolio_store is None or _portfolio_data_dir != config.DATA_DIR:
-        _portfolio_store = PortfolioStore(config.DATA_DIR)
-        _portfolio_data_dir = config.DATA_DIR
-    return _portfolio_store
+def get_portfolio_store(db: Session = Depends(get_db)) -> PortfolioStore:
+    """获取 PortfolioStore 实例（使用数据库）"""
+    return PortfolioStore(db, data_dir=config.DATA_DIR)
 
 def get_settings_store() -> SettingsStore:
     """获取 SettingsStore 实例"""

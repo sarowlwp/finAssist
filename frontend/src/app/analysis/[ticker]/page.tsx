@@ -247,14 +247,14 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">{ticker} 分析报告</h1>
-            <div className="flex items-center gap-4">
-              <span className="text-lg text-gray-600">{analysis?.company_name}</span>
+            <h1 className="text-2xl font-bold mb-1">{ticker} 分析报告</h1>
+            <div className="flex items-center gap-3">
+              <span className="text-base text-gray-600 dark:text-gray-300">{analysis?.company_name}</span>
               <Badge variant={analysis?.status === 'completed' ? 'default' : 'secondary'}>
                 {analysis?.status === 'completed' ? '已完成' : '分析中'}
               </Badge>
@@ -299,18 +299,18 @@ export default function AnalysisPage() {
         )}
 
         {/* Price Info */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-6">
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
               <div>
-                <div className="text-sm text-gray-600 mb-1">当前价格</div>
-                <div className="text-3xl font-bold">
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">当前价格</div>
+                <div className="text-2xl font-bold">
                   ${analysis?.current_price?.toFixed(2) || '0.00'}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600 mb-1">涨跌幅</div>
-                <div className={`text-2xl font-semibold ${(analysis?.change_percent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-0.5">涨跌幅</div>
+                <div className={`text-xl font-semibold ${(analysis?.change_percent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {(analysis?.change_percent || 0) >= 0 ? '+' : ''}{(analysis?.change_percent || 0).toFixed(2)}%
                 </div>
               </div>
@@ -319,17 +319,17 @@ export default function AnalysisPage() {
         </Card>
 
         {/* Fusion Summary */}
-        <Card className="mb-6 border-2 border-blue-500">
-          <CardHeader>
-            <CardTitle className="text-blue-600">Fusion Agent 融合总结</CardTitle>
-            <CardDescription>多Agent综合分析结果</CardDescription>
+        <Card className="mb-4 border-2 border-blue-500 dark:border-blue-700">
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-blue-600 dark:text-blue-400 text-lg">Fusion Agent 融合总结</CardTitle>
+            <CardDescription className="text-sm">多Agent综合分析结果</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="prose prose-slate max-w-none">
+          <CardContent className="pt-0 px-4 pb-4">
+            <div className="prose prose-slate dark:prose-invert max-w-none text-sm">
               {analysis?.fusion_summary ? (
                 renderMarkdown(analysis.fusion_summary)
               ) : analyzing ? (
-                <div className="flex items-center gap-2 text-gray-400 py-4">
+                <div className="flex items-center gap-2 text-gray-400 py-3">
                   <span className="animate-spin">⏳</span>
                   <span>等待所有专项 Agent 完成后进行融合分析...</span>
                 </div>
@@ -339,7 +339,7 @@ export default function AnalysisPage() {
         </Card>
 
         {/* Individual Agent Reports */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {[
             { key: 'news', title: 'News Agent 报告', emoji: '📰', content: analysis?.news_report },
             { key: 'sec', title: 'SEC Agent 报告', emoji: '📋', content: analysis?.sec_report },
@@ -349,33 +349,33 @@ export default function AnalysisPage() {
           ].map((report) => (
             <Card key={report.key} className={report.content ? '' : analyzing ? 'opacity-70' : 'hidden'}>
               <CardHeader
-                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors py-2 px-3"
                 onClick={() => toggleCollapse(report.key as keyof typeof collapsed)}
               >
                 <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
                     <span>{report.emoji}</span>
                     {report.title}
                     {!report.content && analyzing && (
-                      <span className="text-sm font-normal text-gray-400 animate-pulse">分析中...</span>
+                      <span className="text-xs font-normal text-gray-400 animate-pulse">分析中...</span>
                     )}
                     {report.content && analyzing && (
-                      <Badge variant="outline" className="text-green-600 border-green-300">✓ 完成</Badge>
+                      <Badge variant="outline" className="text-green-600 border-green-300 dark:text-green-400 dark:border-green-700 text-xs">✓ 完成</Badge>
                     )}
                   </CardTitle>
-                  <span className="text-gray-400">
+                  <span className="text-gray-400 text-sm">
                     {collapsed[report.key as keyof typeof collapsed] ? '▼' : '▲'}
                   </span>
                 </div>
               </CardHeader>
               {!collapsed[report.key as keyof typeof collapsed] && (
-                <CardContent>
+                <CardContent className="pt-0 px-3 pb-3">
                   {report.content ? (
-                    <div className="prose prose-slate max-w-none">
+                    <div className="prose prose-slate dark:prose-invert max-w-none text-sm">
                       {renderMarkdown(report.content)}
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 text-gray-400 py-4">
+                    <div className="flex items-center gap-2 text-gray-400 py-3">
                       <span className="animate-spin">⏳</span>
                       <span>正在分析中，请稍候...</span>
                     </div>

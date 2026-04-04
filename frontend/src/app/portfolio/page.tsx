@@ -128,23 +128,23 @@ export default function PortfolioPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">持仓管理</h1>
+        <h1 className="text-2xl font-bold mb-4">持仓管理</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Form */}
           <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle>{editingItem ? '编辑持仓' : '添加持仓'}</CardTitle>
-              <CardDescription>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">{editingItem ? '编辑持仓' : '添加持仓'}</CardTitle>
+              <CardDescription className="text-sm">
                 {editingItem ? '修改持仓信息' : '添加新的持仓到投资组合'}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+            <CardContent className="pt-0 px-4 pb-4">
+              <form onSubmit={handleSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium mb-2">股票代码 *</label>
+                  <label className="block text-sm font-medium mb-1.5">股票代码 *</label>
                   <Input
                     type="text"
                     placeholder="例如: AAPL"
@@ -153,9 +153,9 @@ export default function PortfolioPage() {
                     disabled={!!editingItem}
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium mb-2">数量 *</label>
+                  <label className="block text-sm font-medium mb-1.5">数量 *</label>
                   <Input
                     type="number"
                     placeholder="例如: 100"
@@ -164,9 +164,9 @@ export default function PortfolioPage() {
                     step="0.01"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium mb-2">成本价 *</label>
+                  <label className="block text-sm font-medium mb-1.5">成本价 *</label>
                   <Input
                     type="number"
                     placeholder="例如: 150.00"
@@ -175,17 +175,17 @@ export default function PortfolioPage() {
                     step="0.01"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium mb-2">备注</label>
+                  <label className="block text-sm font-medium mb-1.5">备注</label>
                   <Textarea
                     placeholder="添加备注信息..."
                     value={formData.note}
                     onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                    rows={3}
+                    rows={2}
                   />
                 </div>
-                
+
                 <div className="flex gap-2">
                   <Button type="submit" disabled={saving} className="flex-1">
                     {saving ? '保存中...' : (editingItem ? '更新' : '添加')}
@@ -202,12 +202,12 @@ export default function PortfolioPage() {
 
           {/* Portfolio List */}
           <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>持仓列表</CardTitle>
-              <CardDescription>管理您的投资组合</CardDescription>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">持仓列表</CardTitle>
+              <CardDescription className="text-sm">管理您的投资组合</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="mb-4">
+            <CardContent className="pt-0 px-4 pb-4">
+              <div className="mb-3">
                 <Input
                   type="text"
                   placeholder="搜索股票代码或备注..."
@@ -217,35 +217,35 @@ export default function PortfolioPage() {
               </div>
 
               {loading ? (
-                <div className="text-center py-8">加载中...</div>
+                <div className="text-center py-6">加载中...</div>
               ) : filteredPortfolio.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                   {searchQuery ? '没有找到匹配的持仓' : '暂无持仓数据'}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-2">代码</th>
-                        <th className="text-right py-3 px-2">数量</th>
-                        <th className="text-right py-3 px-2">成本价</th>
-                        <th className="text-left py-3 px-2">备注</th>
-                        <th className="text-center py-3 px-2">操作</th>
+                      <tr className="border-b dark:border-gray-700">
+                        <th className="text-left py-2 px-2">代码</th>
+                        <th className="text-right py-2 px-2">数量</th>
+                        <th className="text-right py-2 px-2">成本价</th>
+                        <th className="text-left py-2 px-2">备注</th>
+                        <th className="text-center py-2 px-2">操作</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredPortfolio.map((item) => (
-                        <tr key={item.ticker} className="border-b hover:bg-slate-50">
-                          <td className="py-3 px-2 font-medium">{item.ticker}</td>
-                          <td className="text-right py-3 px-2">{item.quantity}</td>
-                          <td className="text-right py-3 px-2">
+                        <tr key={item.ticker} className="border-b dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-slate-800">
+                          <td className="py-2 px-2 font-medium">{item.ticker}</td>
+                          <td className="text-right py-2 px-2">{item.quantity}</td>
+                          <td className="text-right py-2 px-2">
                             ${item.cost_price.toFixed(2)}
                           </td>
-                          <td className="py-3 px-2 text-sm text-gray-600">
+                          <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
                             {item.note || '-'}
                           </td>
-                          <td className="text-center py-3 px-2">
+                          <td className="text-center py-2 px-2">
                             <div className="flex gap-2 justify-center">
                               <Button
                                 variant="outline"

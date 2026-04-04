@@ -115,47 +115,47 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">设置</h1>
+        <h1 className="text-2xl font-bold mb-4">设置</h1>
 
         {message && (
           <div
-            className={`mb-6 p-4 rounded-lg ${
-              message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+            className={`mb-4 p-3 rounded-lg ${
+              message.type === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-200'
             }`}
           >
             {message.text}
           </div>
         )}
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Investment Style */}
           <Card>
-            <CardHeader>
-              <CardTitle>投资风格</CardTitle>
-              <CardDescription>选择您的投资偏好</CardDescription>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">投资风格</CardTitle>
+              <CardDescription className="text-sm">选择您的投资偏好</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="pt-0 px-4 pb-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium mb-2">投资风格</label>
+                  <label className="block text-sm font-medium mb-1.5">投资风格</label>
                   <Select
                     options={INVESTMENT_STYLE_OPTIONS}
                     value={settings.investment_style || 'balanced'}
                     onChange={(e) => setSettings({ ...settings, investment_style: e.target.value })}
                   />
                 </div>
-                <div className="text-sm text-gray-600">
-                  <p className="font-medium mb-2">风格说明：</p>
-                  <ul className="list-disc list-inside space-y-1">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="font-medium mb-1.5">风格说明：</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
                     <li><strong>保守型</strong>：注重资本保值，选择低风险资产</li>
                     <li><strong>成长型</strong>：追求高增长潜力，接受较高风险</li>
                     <li><strong>价值型</strong>：寻找被低估的优质资产</li>
                     <li><strong>均衡型</strong>：平衡风险和收益，分散投资</li>
                   </ul>
                 </div>
-                <Button onClick={handleSaveInvestmentStyle} disabled={saving}>
+                <Button onClick={handleSaveInvestmentStyle} disabled={saving} size="sm">
                   {saving ? '保存中...' : '保存投资风格'}
                 </Button>
               </div>
@@ -164,14 +164,14 @@ export default function SettingsPage() {
 
           {/* Model Configuration */}
           <Card>
-            <CardHeader>
-              <CardTitle>模型配置</CardTitle>
-              <CardDescription>配置 AI 模型参数</CardDescription>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">模型配置</CardTitle>
+              <CardDescription className="text-sm">配置 AI 模型参数</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="pt-0 px-4 pb-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Provider</label>
+                  <label className="block text-sm font-medium mb-1.5">Provider</label>
                   <Select
                     options={PROVIDER_OPTIONS}
                     value={settings.model_config?.provider || 'openai'}
@@ -183,7 +183,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Model 名称</label>
+                  <label className="block text-sm font-medium mb-1.5">Model 名称</label>
                   <Input
                     type="text"
                     value={settings.model_config?.model || ''}
@@ -196,7 +196,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Temperature</label>
+                  <label className="block text-sm font-medium mb-1.5">Temperature</label>
                   <Input
                     type="number"
                     min="0"
@@ -214,7 +214,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Max Tokens</label>
+                  <label className="block text-sm font-medium mb-1.5">Max Tokens</label>
                   <Input
                     type="number"
                     min="1"
@@ -230,7 +230,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                <Button onClick={handleSaveModelConfig} disabled={saving}>
+                <Button onClick={handleSaveModelConfig} disabled={saving} size="sm">
                   {saving ? '保存中...' : '保存模型配置'}
                 </Button>
               </div>
@@ -239,17 +239,17 @@ export default function SettingsPage() {
 
           {/* API Key Status */}
           <Card>
-            <CardHeader>
-              <CardTitle>API Key 配置状态</CardTitle>
-              <CardDescription>查看各 Provider 的 API Key 配置情况</CardDescription>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">API Key 配置状态</CardTitle>
+              <CardDescription className="text-sm">查看各 Provider 的 API Key 配置情况</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="pt-0 px-4 pb-4">
+              <div className="space-y-2">
                 {PROVIDER_OPTIONS.map((provider) => {
                   const isConfigured = settings.api_keys?.[provider.value] || false
                   return (
-                    <div key={provider.value} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <span className="font-medium">{provider.label}</span>
+                    <div key={provider.value} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <span className="font-medium text-sm">{provider.label}</span>
                       <Badge variant={isConfigured ? 'default' : 'secondary'}>
                         {isConfigured ? '已配置' : '未配置'}
                       </Badge>
@@ -257,7 +257,7 @@ export default function SettingsPage() {
                   )
                 })}
               </div>
-              <p className="text-xs text-gray-500 mt-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
                 注意：此处仅显示配置状态，不显示实际的 API Key。API Key 的配置请在后端进行。
               </p>
             </CardContent>

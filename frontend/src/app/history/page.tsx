@@ -88,17 +88,17 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">分析报告历史</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-2xl font-bold mb-4">分析报告历史</h1>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>搜索和筛选</CardTitle>
-            <CardDescription>查找特定股票的分析报告</CardDescription>
+        <Card className="mb-4">
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-lg">搜索和筛选</CardTitle>
+            <CardDescription className="text-sm">查找特定股票的分析报告</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row gap-4">
+          <CardContent className="pt-0 px-4 pb-4">
+            <div className="flex flex-col md:flex-row gap-3">
               <Input
                 type="text"
                 placeholder="搜索股票代码..."
@@ -106,22 +106,22 @@ export default function HistoryPage() {
                 onChange={(e) => setSearchTicker(e.target.value)}
                 className="max-w-md"
               />
-              <Button onClick={fetchReports}>刷新数据</Button>
+              <Button onClick={fetchReports} size="sm">刷新数据</Button>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* 报告列表 */}
           <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle>报告列表</CardTitle>
-              <CardDescription>共 {filteredReports.length} 条报告</CardDescription>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">报告列表</CardTitle>
+              <CardDescription className="text-sm">共 {filteredReports.length} 条报告</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-[600px] overflow-y-auto">
+            <CardContent className="pt-0 px-4 pb-4">
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
                 {filteredReports.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                     {searchTicker ? '未找到匹配的报告' : '暂无分析报告'}
                   </div>
                 ) : (
@@ -135,8 +135,8 @@ export default function HistoryPage() {
                           ?.scrollIntoView({ behavior: 'smooth' })
                       }
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{report.ticker}</Badge>
                             <Badge variant={
@@ -158,10 +158,10 @@ export default function HistoryPage() {
                           </Button>
                         </div>
                         <p className="text-sm font-medium mb-1">{report.company_name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           创建时间: {formatDate(report.created_at)}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           价格: ${report.current_price.toFixed(2)}
                           <span
                             className={
@@ -183,14 +183,14 @@ export default function HistoryPage() {
 
           {/* 报告详情 */}
           <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>报告详情</CardTitle>
-              <CardDescription>点击左侧报告查看详细内容</CardDescription>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">报告详情</CardTitle>
+              <CardDescription className="text-sm">点击左侧报告查看详细内容</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="pt-0 px-4 pb-4">
+              <div className="space-y-3">
                 {filteredReports.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400">
+                  <div className="text-center py-10 text-gray-400 dark:text-gray-500">
                     选择一个报告查看详情
                   </div>
                 ) : (
@@ -198,23 +198,23 @@ export default function HistoryPage() {
                     <div
                       key={report.report_id}
                       id={`report-${report.report_id}`}
-                      className="border rounded-lg p-4"
+                      className="border rounded-lg p-3 dark:border-gray-700"
                     >
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="flex items-center gap-2 mb-3">
                         <Badge variant="outline">{report.ticker}</Badge>
-                        <h3 className="text-xl font-semibold">
+                        <h3 className="text-lg font-semibold">
                           {report.company_name}
                         </h3>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                         <div>
-                          <p className="text-sm text-gray-600">创建时间</p>
-                          <p className="font-medium">{formatDate(report.created_at)}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">创建时间</p>
+                          <p className="font-medium text-sm">{formatDate(report.created_at)}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">当前价格</p>
-                          <p className="font-medium">
+                          <p className="text-xs text-gray-600 dark:text-gray-400">当前价格</p>
+                          <p className="font-medium text-sm">
                             ${report.current_price.toFixed(2)}
                             <span
                               className={
@@ -230,17 +230,17 @@ export default function HistoryPage() {
                       </div>
 
                       {report.fusion_summary && (
-                        <div className="mb-6">
-                          <h4 className="text-lg font-semibold mb-2 text-blue-600">
+                        <div className="mb-4">
+                          <h4 className="text-base font-semibold mb-1.5 text-blue-600 dark:text-blue-400">
                             Fusion Agent 融合总结
                           </h4>
-                          <div className="prose prose-slate max-w-none text-sm">
+                          <div className="prose prose-slate dark:prose-invert max-w-none text-sm">
                             {report.fusion_summary.substring(0, 200)}...
                           </div>
                         </div>
                       )}
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         {[
                           { title: 'News Agent', content: report.news_report, emoji: '📰' },
                           { title: 'SEC Agent', content: report.sec_report, emoji: '📋' },
@@ -248,17 +248,17 @@ export default function HistoryPage() {
                           { title: 'Technical Agent', content: report.technical_report, emoji: '📈' },
                           { title: 'Custom Skill Agent', content: report.custom_skill_report, emoji: '🔧' },
                         ].map(({ title, content, emoji }) => (
-                          <div key={title} className="border rounded-lg p-3">
-                            <h5 className="font-semibold mb-2 flex items-center gap-2">
+                          <div key={title} className="border rounded-lg p-2.5 dark:border-gray-700">
+                            <h5 className="font-semibold mb-1.5 flex items-center gap-2 text-sm">
                               <span>{emoji}</span>
                               {title}
                             </h5>
                             {content ? (
-                              <p className="text-sm text-gray-600">
+                              <p className="text-xs text-gray-600 dark:text-gray-400">
                                 {content.substring(0, 100)}...
                               </p>
                             ) : (
-                              <p className="text-sm text-gray-400 italic">暂无内容</p>
+                              <p className="text-xs text-gray-400 italic">暂无内容</p>
                             )}
                           </div>
                         ))}
