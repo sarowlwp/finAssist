@@ -1,10 +1,15 @@
 from sqlalchemy import Column, Integer, String, DateTime, JSON, DECIMAL, ForeignKey
 from sqlalchemy.sql import func
 from database import Base
-from typing import List
 from sqlalchemy.orm import relationship
 
+
 class FinnhubCache(Base):
+    """
+    Finnhub API 数据缓存模型
+
+    用于存储 Finnhub API 返回的数据，避免重复请求。
+    """
     __tablename__ = "finnhub_cache"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -15,7 +20,13 @@ class FinnhubCache(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     expires_at = Column(DateTime(timezone=True), nullable=False)
 
+
 class AnalysisReport(Base):
+    """
+    分析报告主模型
+
+    存储完整分析报告的元数据和汇总信息。
+    """
     __tablename__ = "analysis_reports"
 
     report_id = Column(String(36), primary_key=True, index=True)
@@ -29,7 +40,13 @@ class AnalysisReport(Base):
 
     agent_reports = relationship("AgentReport", back_populates="analysis_report")
 
+
 class AgentReport(Base):
+    """
+    Agent 报告子模型
+
+    存储各个分析 Agent 生成的详细报告。
+    """
     __tablename__ = "agent_reports"
 
     id = Column(Integer, primary_key=True, index=True)

@@ -7,7 +7,6 @@ from pathlib import Path
 import json
 from datetime import datetime
 from services.analysis_report_repository import AnalysisReportRepository
-from dependencies import get_db
 from models import AnalysisReport as DBReport
 from models import AgentReport as DBAgentReport
 
@@ -36,6 +35,7 @@ class AnalysisStore:
         self.data_dir = data_dir
 
     def load_all(self) -> List[AnalysisReport]:
+        from dependencies import get_db
         db = next(get_db())
         repo = AnalysisReportRepository(db)
         db_reports = repo.get_recent_reports(100)
@@ -81,6 +81,7 @@ class AnalysisStore:
         return [report for report in all_reports if report.ticker.upper() == ticker.upper()]
 
     def load_by_id(self, report_id: str) -> Optional[AnalysisReport]:
+        from dependencies import get_db
         db = next(get_db())
         repo = AnalysisReportRepository(db)
         db_report = repo.get_report(report_id)
@@ -121,6 +122,7 @@ class AnalysisStore:
         return None
 
     def save_report(self, report: AnalysisReport) -> AnalysisReport:
+        from dependencies import get_db
         db = next(get_db())
         repo = AnalysisReportRepository(db)
 
@@ -153,6 +155,7 @@ class AnalysisStore:
         return report
 
     def delete_report(self, report_id: str) -> bool:
+        from dependencies import get_db
         db = next(get_db())
         repo = AnalysisReportRepository(db)
         return repo.delete_report(report_id)
@@ -160,6 +163,7 @@ class AnalysisStore:
     def delete_reports_by_ticker(self, ticker: str) -> int:
         reports = self.load_by_ticker(ticker)
         count = 0
+        from dependencies import get_db
         db = next(get_db())
         repo = AnalysisReportRepository(db)
         for report in reports:
