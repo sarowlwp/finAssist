@@ -169,6 +169,8 @@ async def run_ticker_analysis(
         metadata = result.get('metadata', {})
         quote_data = metadata.get('quote', {})
 
+        # 转换所有报告为 Markdown
+        from utils.json_to_markdown import json_to_markdown
         report = AnalysisReport(
             report_id=report_id,
             ticker=ticker,
@@ -176,12 +178,12 @@ async def run_ticker_analysis(
             status='completed',
             current_price=quote_data.get('current_price', 0),
             change_percent=quote_data.get('change_percent', 0),
-            fusion_summary=result.get('fusion_output', ''),
-            news_report=agent_outputs.get('news_agent', ''),
-            sec_report=agent_outputs.get('sec_agent', ''),
-            fundamentals_report=agent_outputs.get('fundamentals_agent', ''),
-            technical_report=agent_outputs.get('technical_agent', ''),
-            custom_skill_report=agent_outputs.get('custom_skill_agent', '')
+            fusion_summary=json_to_markdown(result.get('fusion_output', '')),
+            news_report=json_to_markdown(agent_outputs.get('news_agent', '')),
+            sec_report=json_to_markdown(agent_outputs.get('sec_agent', '')),
+            fundamentals_report=json_to_markdown(agent_outputs.get('fundamentals_agent', '')),
+            technical_report=json_to_markdown(agent_outputs.get('technical_agent', '')),
+            custom_skill_report=json_to_markdown(agent_outputs.get('custom_skill_agent', ''))
         )
 
         # 这里需要获取 analysis_store 来保存报告
@@ -698,12 +700,12 @@ async def analyze_ticker_stream(
                             status='completed',
                             current_price=quote_data.get('current_price', 0),
                             change_percent=quote_data.get('change_percent', 0),
-                            fusion_summary=result.get('fusion_output', ''),
-                            news_report=agent_outputs.get('news_agent', ''),
-                            sec_report=agent_outputs.get('sec_agent', ''),
-                            fundamentals_report=agent_outputs.get('fundamentals_agent', ''),
-                            technical_report=agent_outputs.get('technical_agent', ''),
-                            custom_skill_report=agent_outputs.get('custom_skill_agent', '')
+                            fusion_summary=json_to_markdown(result.get('fusion_output', '')),
+                            news_report=json_to_markdown(agent_outputs.get('news_agent', '')),
+                            sec_report=json_to_markdown(agent_outputs.get('sec_agent', '')),
+                            fundamentals_report=json_to_markdown(agent_outputs.get('fundamentals_agent', '')),
+                            technical_report=json_to_markdown(agent_outputs.get('technical_agent', '')),
+                            custom_skill_report=json_to_markdown(agent_outputs.get('custom_skill_agent', ''))
                         )
                         analysis_store.save_report(report)
                         logger.info(f"分析报告已保存: {report_id}")
@@ -715,8 +717,11 @@ async def analyze_ticker_stream(
                     for agent_name, agent_content in agent_outputs.items():
                         yield f"data: {json.dumps({'type': 'agent_result', 'agent_name': agent_name, 'agent_content': agent_content}, ensure_ascii=False)}\n\n"
                     
-                    # 再发送 fusion 输出
-                    yield f"data: {json.dumps({'type': 'fusion_result', 'fusion_output': result.get('fusion_output', '')}, ensure_ascii=False)}\n\n"
+                    # 再发送 fusion 输出 - 转换为 Markdown
+                    from utils.json_to_markdown import json_to_markdown
+                    fusion_output = result.get('fusion_output', '')
+                    fusion_markdown = json_to_markdown(fusion_output)
+                    yield f"data: {json.dumps({'type': 'fusion_result', 'fusion_output': fusion_markdown}, ensure_ascii=False)}\n\n"
                     
                     # 最后发送 complete 信号（不含大文本，只含元数据）
                     complete_data = {
