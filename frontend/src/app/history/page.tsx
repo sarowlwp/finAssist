@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { analysisApi } from '@/lib/api'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import MarkdownRenderer from '@/components/MarkdownRenderer'
 
 interface AnalysisTask {
   task_id: string
@@ -353,7 +354,7 @@ export default function HistoryPage() {
                       </div>
 
                       {report.fusion_summary && (
-                        <div className="mb-4">
+                        <div className="mb-4" data-testid="fusion-summary">
                           <div className="flex items-center justify-between mb-1.5">
                             <h4 className="text-base font-semibold text-blue-600 dark:text-blue-400">
                               Fusion Agent 融合总结
@@ -366,13 +367,13 @@ export default function HistoryPage() {
                               {expandedSections.has(`fusion-${report.report_id}`) ? '收起' : '展开'}
                             </Button>
                           </div>
-                          <div className="prose prose-slate dark:prose-invert max-w-none text-sm">
-                            {expandedSections.has(`fusion-${report.report_id}`) ? (
-                              report.fusion_summary
-                            ) : (
-                              `${report.fusion_summary.substring(0, 200)}...`
-                            )}
-                          </div>
+                          {expandedSections.has(`fusion-${report.report_id}`) ? (
+                            <MarkdownRenderer content={report.fusion_summary} />
+                          ) : (
+                            <div className="text-sm text-gray-700 dark:text-gray-300">
+                              {report.fusion_summary.substring(0, 200)}...
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -386,7 +387,7 @@ export default function HistoryPage() {
                         ].map(({ title, content, emoji }) => {
                           const sectionKey = `${title.toLowerCase().replace(/\s+/g, '-')}-${report.report_id}`
                           return (
-                            <div key={title} className="border rounded-lg p-2.5">
+                            <div key={title} className="border rounded-lg p-2.5" data-testid="agent-report">
                               <div className="flex items-center justify-between mb-1.5">
                                 <h5 className="font-semibold flex items-center gap-2 text-sm">
                                   <span>{emoji}</span>
@@ -403,13 +404,13 @@ export default function HistoryPage() {
                                 )}
                               </div>
                               {content ? (
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {expandedSections.has(sectionKey) ? (
-                                    content
-                                  ) : (
-                                    `${content.substring(0, 100)}...`
-                                  )}
-                                </p>
+                                expandedSections.has(sectionKey) ? (
+                                  <MarkdownRenderer content={content} />
+                                ) : (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {content.substring(0, 100)}...
+                                  </div>
+                                )
                               ) : (
                                 <p className="text-xs text-gray-400 italic">暂无内容</p>
                               )}
