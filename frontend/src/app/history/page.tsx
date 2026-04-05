@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,11 +42,13 @@ interface AnalysisReport {
 }
 
 export default function HistoryPage() {
+  const router = useRouter()
   const [reports, setReports] = useState<AnalysisReport[]>([])
   const [tasks, setTasks] = useState<AnalysisTask[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTicker, setSearchTicker] = useState('')
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
+  const [deleteTaskLoading, setDeleteTaskLoading] = useState<string | null>(null)
   const [expandedReports, setExpandedReports] = useState<Set<string>>(new Set())
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [showTasks, setShowTasks] = useState(true)
@@ -86,6 +89,22 @@ export default function HistoryPage() {
       console.error('Failed to delete report:', err)
     } finally {
       setDeleteLoading(null)
+    }
+  }
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('确定要删除该分析任务吗？此操作无法撤销。')) {
+      return
+    }
+
+    try {
+      setDeleteTaskLoading(taskId)
+      await analysisApi.deleteTask(taskId)
+      setTasks(tasks.filter(task => task.task_id !== taskId))
+    } catch (err) {
+      console.error('Failed to delete task:', err)
+    } finally {
+      setDeleteTaskLoading(null)
     }
   }
 
@@ -228,6 +247,27 @@ export default function HistoryPage() {
                         </Button>
                       </div>
                     )}
+                    <div className="mt-2 flex gap-2">
+                      {task.status === 'analyzing' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/analysis/${task.ticker}`)}
+                        >
+                          查看实时进度
+                        </Button>
+                      )}
+                      {task.status !== 'analyzing' && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={deleteTaskLoading === task.task_id}
+                          onClick={() => handleDeleteTask(task.task_id)}
+                        >
+                          {deleteTaskLoading === task.task_id ? '删除中...' : '删除任务'}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
