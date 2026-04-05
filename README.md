@@ -191,6 +191,45 @@ npm run dev
 | `/api/settings/model-config` | PUT | 更新模型配置 |
 | `/api/market/quote/{ticker}` | GET | 获取股票报价 |
 
+## 🔄 服务重启方法
+
+在开发过程中，修改代码后需要重启服务才能看到更新。
+
+### 后端服务重启
+1. 停止正在运行的后端服务
+   ```bash
+   pkill -f "uvicorn" 2>/dev/null || true
+   rm -f backend/uvicorn.pid
+   ```
+
+2. 启动后端服务（使用虚拟环境）
+   ```bash
+   cd backend
+   source venv/bin/activate
+   python3 main.py
+   ```
+
+3. 验证后端服务是否正常运行
+   - 访问 http://localhost:8001
+   - 检查是否有 "Uvicorn running on" 信息
+
+### 前端服务重启
+1. 停止正在运行的前端服务
+   ```bash
+   pkill -f "next" 2>/dev/null || true
+   rm -f frontend/next.pid
+   ```
+
+2. 启动前端服务
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+3. 验证前端服务是否正常运行
+   - 访问 http://localhost:3000
+   - 检查是否有 "Ready in" 信息
+
 ## 📝 注意事项
 
 1. **端口冲突**：后端默认使用 8001 端口，如被占用请修改 `backend/main.py` 中的 `port` 参数
