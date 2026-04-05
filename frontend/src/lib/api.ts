@@ -38,65 +38,90 @@ async function apiRequest(url: string, options: RequestInit = {}) {
 
 // 公司概况类型定义
 export interface CompanyProfile {
+  success: boolean;
   ticker: string;
-  name: string;
-  exchange: string;
-  industry: string;
-  sector: string;
-  marketCapitalization: number;
-  employees: number;
-  description: string;
-  website: string;
-  logo: string;
-  ipoDate: string;
+  company_name?: string;
+  name?: string;
+  country?: string;
+  currency?: string;
+  exchange?: string;
+  industry?: string;
+  market_cap?: number;
+  marketCapitalization?: number;
+  description?: string;
+  website?: string;
+  weburl?: string;
+  logo?: string;
+  timestamp?: string;
+  error?: string;
 }
 
 // 财务指标类型定义
 export interface Financials {
-  revenue: number;
-  revenueGrowth: number;
-  operatingIncome: number;
-  netIncome: number;
-  eps: number;
-  peRatio: number;
-  pbRatio: number;
-  debtToEquity: number;
-  roe: number;
-  roa: number;
-  grossMargin: number;
-  operatingMargin: number;
-  netMargin: number;
-  currentRatio: number;
-  quickRatio: number;
-  dividendYield: number;
+  success: boolean;
+  ticker: string;
+  pe_ratio?: number;
+  peRatio?: number;
+  pb_ratio?: number;
+  pbRatio?: number;
+  ps_ratio?: number;
+  psRatio?: number;
+  roe?: number;
+  roa?: number;
+  profit_margin?: number;
+  netMargin?: number;
+  dividend_yield?: number;
+  dividendYield?: number;
+  debt_to_equity?: number;
+  debtToEquity?: number;
+  current_ratio?: number;
+  currentRatio?: number;
+  quick_ratio?: number;
+  quickRatio?: number;
+  revenue_growth?: number;
+  revenueGrowth?: number;
+  earnings_growth?: number;
+  epsGrowth?: number;
+  timestamp?: string;
+  error?: string;
 }
 
 // 技术指标类型定义
 export interface TechnicalIndicators {
-  sma50: number;
-  sma200: number;
-  ema12: number;
-  ema26: number;
-  macd: number;
-  signal: number;
-  histogram: number;
-  rsi: number;
-  bollingerUpper: number;
-  bollingerMiddle: number;
-  bollingerLower: number;
-  stochasticK: number;
-  stochasticD: number;
-  williamsR: number;
-  momentum: number;
+  success: boolean;
+  ticker: string;
+  current_price?: number;
+  rsi?: number;
+  macd?: {
+    macd: number;
+    signal: number;
+    histogram: number;
+  };
+  bollinger_bands?: {
+    upper: number;
+    middle: number;
+    lower: number;
+  };
+  bollingerUpper?: number;
+  bollingerMiddle?: number;
+  bollingerLower?: number;
+  rsi_signal?: string;
+  timestamp?: string;
+  error?: string;
 }
 
 // 基本面数据类型定义
 export interface FundamentalsData {
   ticker: string;
-  companyProfile: CompanyProfile;
-  financials: Financials;
-  technicalIndicators: TechnicalIndicators;
-  lastUpdated: string;
+  company_profile?: CompanyProfile;
+  companyProfile?: CompanyProfile;
+  financials?: Financials;
+  technical_indicators?: TechnicalIndicators;
+  technicalIndicators?: TechnicalIndicators;
+  timestamp?: string;
+  lastUpdated?: string;
+  success?: boolean;
+  message?: string;
 }
 
 // 投资组合管理

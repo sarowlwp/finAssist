@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button'
 import { portfolioApi, analysisApi } from '@/lib/api'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { Eye } from 'lucide-react'
+import FundamentalsModal from '@/components/portfolio/FundamentalsModal'
 
 interface PortfolioItem {
   ticker: string
@@ -31,6 +33,13 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([])
   const [analyzing, setAnalyzing] = useState(false)
+  const [selectedTicker, setSelectedTicker] = useState<string>('')
+  const [showFundamentalsModal, setShowFundamentalsModal] = useState(false)
+
+  const handleShowFundamentals = (ticker: string) => {
+    setSelectedTicker(ticker)
+    setShowFundamentalsModal(true)
+  }
 
   useEffect(() => {
     fetchData()
@@ -247,11 +256,22 @@ export default function DashboardPage() {
                           {formatPercent(item.profit_loss_percent || 0)}
                         </td>
                         <td className="text-center py-2 px-2">
-                          <Link href={`/analysis/${item.ticker}`}>
-                            <Button variant="outline" size="sm">
-                              分析
+                          <div className="flex gap-2 justify-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleShowFundamentals(item.ticker)}
+                              className="flex items-center gap-1"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              查看数据
                             </Button>
-                          </Link>
+                            <Link href={`/analysis/${item.ticker}`}>
+                              <Button variant="outline" size="sm">
+                                分析
+                              </Button>
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -264,7 +284,7 @@ export default function DashboardPage() {
 
         {/* Analyze Button */}
         <div className="flex justify-center">
-          <Button 
+          <Button
             onClick={handleAnalyzePortfolio}
             disabled={analyzing || portfolio.length === 0}
             size="lg"
@@ -273,6 +293,13 @@ export default function DashboardPage() {
             {analyzing ? '分析中...' : '今日分析'}
           </Button>
         </div>
+
+        {/* Fundamentals Modal */}
+        <FundamentalsModal
+          ticker={selectedTicker}
+          isOpen={showFundamentalsModal}
+          onClose={() => setShowFundamentalsModal(false)}
+        />
       </div>
     </div>
   )

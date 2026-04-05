@@ -107,23 +107,23 @@ const FundamentalsModal: React.FC<FundamentalsModalProps> = ({ ticker, isOpen, o
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">公司名称</p>
-            <p className="font-medium">{data?.companyProfile?.name || '-'}</p>
+            <p className="font-medium">{data?.company_profile?.company_name || data?.companyProfile?.name || '-'}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">行业</p>
-            <p className="font-medium">{data?.companyProfile?.industry || '-'}</p>
+            <p className="font-medium">{data?.company_profile?.industry || data?.companyProfile?.industry || '-'}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">市值</p>
-            <p className="font-medium">{formatLargeNumber(data?.companyProfile?.marketCapitalization)}</p>
+            <p className="font-medium">{formatLargeNumber(data?.company_profile?.market_cap || data?.companyProfile?.marketCapitalization)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">市场</p>
-            <p className="font-medium">{data?.companyProfile?.exchange || '-'}</p>
+            <p className="font-medium">{data?.company_profile?.exchange || data?.companyProfile?.exchange || '-'}</p>
           </div>
           <div className="md:col-span-2">
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">公司描述</p>
-            <p className="text-sm leading-relaxed">{data?.companyProfile?.description || '-'}</p>
+            <p className="text-sm leading-relaxed">{data?.company_profile?.description || data?.companyProfile?.description || '-'}</p>
           </div>
         </div>
       </CardContent>
@@ -140,19 +140,19 @@ const FundamentalsModal: React.FC<FundamentalsModalProps> = ({ ticker, isOpen, o
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">PE</p>
-            <p className="font-medium">{formatNumber(data?.financials?.peRatio)}</p>
+            <p className="font-medium">{formatNumber(data?.financials?.pe_ratio || data?.financials?.peRatio)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">PB</p>
-            <p className="font-medium">{formatNumber(data?.financials?.pbRatio)}</p>
+            <p className="font-medium">{formatNumber(data?.financials?.pb_ratio || data?.financials?.pbRatio)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">PS</p>
-            <p className="font-medium">{formatNumber(data?.companyProfile?.marketCapitalization && data?.financials?.revenue ? data?.companyProfile?.marketCapitalization / data?.financials?.revenue : undefined)}</p>
+            <p className="font-medium">{formatNumber(data?.financials?.ps_ratio || data?.financials?.psRatio)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">股息率</p>
-            <p className="font-medium">{formatPercentage(data?.financials?.dividendYield)}</p>
+            <p className="font-medium">{formatPercentage(data?.financials?.dividend_yield || data?.financials?.dividendYield)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">ROE</p>
@@ -164,11 +164,11 @@ const FundamentalsModal: React.FC<FundamentalsModalProps> = ({ ticker, isOpen, o
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">净利润率</p>
-            <p className="font-medium">{formatPercentage(data?.financials?.netMargin)}</p>
+            <p className="font-medium">{formatPercentage(data?.financials?.profit_margin || data?.financials?.netMargin)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">营收增长率</p>
-            <p className="font-medium">{formatPercentage(data?.financials?.revenueGrowth)}</p>
+            <p className="font-medium">{formatPercentage(data?.financials?.revenue_growth || data?.financials?.revenueGrowth)}</p>
           </div>
         </div>
       </CardContent>
@@ -185,15 +185,15 @@ const FundamentalsModal: React.FC<FundamentalsModalProps> = ({ ticker, isOpen, o
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">负债率</p>
-            <p className="font-medium">{formatPercentage(data?.financials?.debtToEquity)}</p>
+            <p className="font-medium">{formatPercentage(data?.financials?.debt_to_equity || data?.financials?.debtToEquity)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">流动比率</p>
-            <p className="font-medium">{formatNumber(data?.financials?.currentRatio)}</p>
+            <p className="font-medium">{formatNumber(data?.financials?.current_ratio || data?.financials?.currentRatio)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">速动比率</p>
-            <p className="font-medium">{formatNumber(data?.financials?.quickRatio)}</p>
+            <p className="font-medium">{formatNumber(data?.financials?.quick_ratio || data?.financials?.quickRatio)}</p>
           </div>
         </div>
       </CardContent>
@@ -210,23 +210,23 @@ const FundamentalsModal: React.FC<FundamentalsModalProps> = ({ ticker, isOpen, o
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">RSI</p>
-            <p className="font-medium">{formatNumber(data?.technicalIndicators?.rsi)}</p>
+            <p className="font-medium">{formatNumber(data?.technical_indicators?.rsi || data?.technicalIndicators?.rsi)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">MACD</p>
-            <p className="font-medium">{formatNumber(data?.technicalIndicators?.macd)}</p>
+            <p className="font-medium">{formatNumber(data?.technical_indicators?.macd?.macd || data?.technicalIndicators?.macd)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">布林带上轨</p>
-            <p className="font-medium">{formatNumber(data?.technicalIndicators?.bollingerUpper)}</p>
+            <p className="font-medium">{formatNumber(data?.technical_indicators?.bollinger_bands?.upper || data?.technicalIndicators?.bollingerUpper)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">布林带中轨</p>
-            <p className="font-medium">{formatNumber(data?.technicalIndicators?.bollingerMiddle)}</p>
+            <p className="font-medium">{formatNumber(data?.technical_indicators?.bollinger_bands?.middle || data?.technicalIndicators?.bollingerMiddle)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">布林带下轨</p>
-            <p className="font-medium">{formatNumber(data?.technicalIndicators?.bollingerLower)}</p>
+            <p className="font-medium">{formatNumber(data?.technical_indicators?.bollinger_bands?.lower || data?.technicalIndicators?.bollingerLower)}</p>
           </div>
         </div>
       </CardContent>

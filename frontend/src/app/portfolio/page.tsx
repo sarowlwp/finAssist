@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { portfolioApi } from '@/lib/api'
-import FundamentalsModal from '@/components/portfolio/FundamentalsModal'
-import { Eye } from 'lucide-react'
 
 interface PortfolioItem {
   ticker: string
@@ -35,13 +33,6 @@ export default function PortfolioPage() {
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [saving, setSaving] = useState(false)
-  const [selectedTicker, setSelectedTicker] = useState<string>('')
-  const [showFundamentalsModal, setShowFundamentalsModal] = useState(false)
-
-  const handleShowFundamentals = (ticker: string) => {
-    setSelectedTicker(ticker)
-    setShowFundamentalsModal(true)
-  }
 
   useEffect(() => {
     fetchPortfolio()
@@ -50,16 +41,11 @@ export default function PortfolioPage() {
   const fetchPortfolio = async () => {
     try {
       setLoading(true)
-      // 直接抛出错误，强制使用fallback数据，确保E2E测试的稳定性
-      throw new Error('Forced error to use mock data for E2E testing')
-
-      /* 注释掉实际API调用，使用fallback数据
       const data = await portfolioApi.getAll()
       setPortfolio(data)
-      */
     } catch (err) {
       console.error('Failed to fetch portfolio:', err)
-      // Mock data if API fails - 使用E2E测试期望的数据格式
+      // Mock data if API fails
       setPortfolio([
         { ticker: 'AAPL', quantity: 100, cost_price: 150.00, note: '长期持有' },
         { ticker: 'GOOGL', quantity: 50, cost_price: 120.00, note: '科技股' },
@@ -264,15 +250,6 @@ export default function PortfolioPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleShowFundamentals(item.ticker)}
-                                className="flex items-center gap-1"
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                                查看数据
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
                                 onClick={() => handleEdit(item)}
                               >
                                 编辑
@@ -296,12 +273,6 @@ export default function PortfolioPage() {
           </Card>
         </div>
 
-        {/* Fundamentals Modal */}
-        <FundamentalsModal
-          ticker={selectedTicker}
-          isOpen={showFundamentalsModal}
-          onClose={() => setShowFundamentalsModal(false)}
-        />
       </div>
     </div>
   )
