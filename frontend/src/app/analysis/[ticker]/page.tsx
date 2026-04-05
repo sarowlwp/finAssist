@@ -6,6 +6,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { marketApi, analysisApi } from '@/lib/api'
+import MarkdownRenderer from '@/components/MarkdownRenderer'
+import AgentReportCard from '@/components/analysis/AgentReportCard'
 
 // 导入 SSE 事件类型（从 lib/api 复制或重新定义）
 interface StreamEvent {
@@ -247,24 +249,6 @@ export default function AnalysisPage() {
     setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const renderMarkdown = (content: string) => {
-    // Simple markdown rendering
-    const lines = content.split('\n')
-    return lines.map((line, index) => {
-      if (line.startsWith('## ')) {
-        return <h3 key={index} className="text-xl font-bold mt-4 mb-2">{line.replace('## ', '')}</h3>
-      } else if (line.startsWith('### ')) {
-        return <h4 key={index} className="text-lg font-semibold mt-3 mb-1">{line.replace('### ', '')}</h4>
-      } else if (line.startsWith('- ')) {
-        return <li key={index} className="ml-4">{line.replace('- ', '')}</li>
-      } else if (line.startsWith('**') && line.endsWith('**')) {
-        return <p key={index} className="font-semibold mt-2 mb-1">{line.replace(/\*\*/g, '')}</p>
-      } else if (line.trim()) {
-        return <p key={index} className="mb-1">{line}</p>
-      }
-      return <br key={index} />
-    })
-  }
 
   if (loading) {
     return (
@@ -498,10 +482,10 @@ export default function AnalysisPage() {
             <CardTitle className="text-blue-600 dark:text-blue-400 text-lg">Fusion Agent 融合总结</CardTitle>
             <CardDescription className="text-sm">多Agent综合分析结果</CardDescription>
           </CardHeader>
-          <CardContent className="pt-0 px-4 pb-4">
+          <CardContent className="pt-0 px-4 pb-4" data-testid="fusion-summary">
             <div className="prose prose-slate dark:prose-invert max-w-none text-sm">
               {analysis?.fusion_summary ? (
-                renderMarkdown(analysis.fusion_summary)
+                <MarkdownRenderer content={analysis?.fusion_summary || ''} />
               ) : analyzing ? (
                 <div className="flex items-center gap-2 text-gray-400 py-3">
                   <span className="animate-spin">⏳</span>
@@ -521,48 +505,48 @@ export default function AnalysisPage() {
             { key: 'technical', title: 'Technical Agent 报告', emoji: '📈', content: analysis?.technical_report },
             { key: 'custom_skill', title: 'Custom Skill Agent 报告', emoji: '🔧', content: analysis?.custom_skill_report },
           ].map((report) => (
-            <Card key={report.key} className={report.content ? '' : analyzing ? 'opacity-70' : ''}>
-              <CardHeader
-                className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors py-2 px-3"
-                onClick={() => toggleCollapse(report.key as keyof typeof collapsed)}
-              >
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <span>{report.emoji}</span>
-                    {report.title}
-                    {!report.content && analyzing && (
-                      <span className="text-xs font-normal text-gray-400 animate-pulse">分析中...</span>
-                    )}
-                    {report.content && analyzing && (
-                      <Badge variant="outline" className="text-green-600 border-green-300 dark:text-green-400 dark:border-green-700 text-xs">✓ 完成</Badge>
-                    )}
-                  </CardTitle>
-                  <span className="text-gray-400 text-sm">
-                    {collapsed[report.key as keyof typeof collapsed] ? '▼' : '▲'}
-                  </span>
-                </div>
-              </CardHeader>
-              {!collapsed[report.key as keyof typeof collapsed] && (
-                <CardContent className="pt-0 px-3 pb-3">
-                  {report.content ? (
-                    <div className="prose prose-slate dark:prose-invert max-w-none text-sm">
-                      {renderMarkdown(report.content)}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-gray-400 py-3">
-                      {analyzing ? (
-                        <>
-                          <span className="animate-spin">⏳</span>
-                          <span>正在分析中，请稍候...</span>
-                        </>
-                      ) : (
-                        <span>暂无分析内容，请点击‘重新分析’按钮开始分析</span>
+            <div key={report.key} data-testid={`${report.key}-agent-report`}>
+              <Card className={report.content ? '' : analyzing ? 'opacity-70' : ''}>
+                <CardHeader
+                  className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors py-2 px-3"
+                  onClick={() => toggleCollapse(report.key as keyof typeof collapsed)}
+                >
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <span>{report.emoji}</span>
+                      {report.title}
+                      {!report.content && analyzing && (
+                        <span className="text-xs font-normal text-gray-400 animate-pulse">分析中...</span>
                       )}
-                    </div>
-                  )}
-                </CardContent>
-              )}
-            </Card>
+                      {report.content && analyzing && (
+                        <Badge variant="outline" className="text-green-600 border-green-300 dark:text-green-400 dark:border-green-700 text-xs">✓ 完成</Badge>
+                      )}
+                    </CardTitle>
+                    <span className="text-gray-400 text-sm">
+                      {collapsed[report.key as keyof typeof collapsed] ? '▼' : '▲'}
+                    </span>
+                  </div>
+                </CardHeader>
+                {!collapsed[report.key as keyof typeof collapsed] && (
+                  <CardContent className="pt-0 px-3 pb-3">
+                    {report.content ? (
+                      <MarkdownRenderer content={report.content} />
+                    ) : (
+                      <div className="flex items-center gap-2 text-gray-400 py-3">
+                        {analyzing ? (
+                          <>
+                            <span className="animate-spin">⏳</span>
+                            <span>正在分析中，请稍候...</span>
+                          </>
+                        ) : (
+                          <span>暂无分析内容，请点击‘重新分析’按钮开始分析</span>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                )}
+              </Card>
+            </div>
           ))}
         </div>
       </div>
