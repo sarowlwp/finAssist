@@ -10,10 +10,54 @@ import math
 
 class FinnhubService:
     """Finnhub API 服务类"""
-    
+
     def __init__(self, api_key: str, db=None):
         self.client = FinnhubClient(api_key=api_key)
         self.db = db
+
+    def _generate_ir_website(self, ticker: str, company_website: str = "") -> str:
+        """
+        生成投资者关系网站链接
+
+        Args:
+            ticker: 股票代码
+            company_website: 公司官网
+
+        Returns:
+            投资者关系网站URL
+        """
+        # 如果公司官网存在，尝试构造IR子域名
+        if company_website:
+            import re
+            # 提取域名
+            domain_match = re.search(r'https?://([^/]+)', company_website)
+            if domain_match:
+                domain = domain_match.group(1)
+                # 尝试常见的IR子域名模式
+                ir_subdomains = ['ir.', 'investor.', 'investors.', 'investor-relations.']
+                for sub in ir_subdomains:
+                    if sub in domain:
+                        return company_website
+                # 尝试构造IR网址
+                for sub in ir_subdomains:
+                    base_domain = re.sub(r'^www\.', '', domain)
+                    return f"https://{sub}{base_domain}"
+
+        # 默认使用SEC EDGAR或常见IR网站
+        return f"https://www.sec.gov/edgar/browse/?CIK={ticker}"
+
+    def _generate_earnings_url(self, ticker: str) -> str:
+        """
+        生成财报链接
+
+        Args:
+            ticker: 股票代码
+
+        Returns:
+            财报页面URL
+        """
+        # SEC EDGAR 财报查询
+        return f"https://www.sec.gov/edgar/browse/?CIK={ticker}"
     
     def _handle_api_error(self, func_name: str, error: Exception) -> Dict[str, Any]:
         """统一处理 API 错误"""
@@ -86,6 +130,12 @@ class FinnhubService:
 
         try:
             profile = self.client.company_profile2(symbol=ticker)
+
+            # 生成投资者关系网站和财报链接
+            website = profile.get("weburl", "")
+            ir_website = self._generate_ir_website(ticker, website)
+            earnings_url = self._generate_earnings_url(ticker)
+
             result = {
                 "success": True,
                 "ticker": ticker,
@@ -96,7 +146,9 @@ class FinnhubService:
                 "industry": profile.get("finnhubIndustry"),
                 "market_cap": profile.get("marketCapitalization"),
                 "description": profile.get("description"),
-                "website": profile.get("weburl"),
+                "website": website,
+                "ir_website": ir_website,
+                "earnings_url": earnings_url,
                 "logo": profile.get("logo"),
                 "timestamp": datetime.now().isoformat()
             }

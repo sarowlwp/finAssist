@@ -125,6 +125,36 @@ const FundamentalsModal: React.FC<FundamentalsModalProps> = ({ ticker, isOpen, o
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">公司描述</p>
             <p className="text-sm leading-relaxed">{data?.company_profile?.description || data?.companyProfile?.description || '-'}</p>
           </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">投资者关系</p>
+            {data?.company_profile?.ir_website || data?.companyProfile?.ir_website ? (
+              <a
+                href={data.company_profile.ir_website || data.companyProfile.ir_website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 truncate"
+              >
+                {data.company_profile.ir_website || data.companyProfile.ir_website}
+              </a>
+            ) : (
+              <span className="text-gray-400">-</span>
+            )}
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">财报信息</p>
+            {data?.company_profile?.earnings_url || data?.companyProfile?.earnings_url ? (
+              <a
+                href={data.company_profile.earnings_url || data.companyProfile.earnings_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 truncate"
+              >
+                {data.company_profile.earnings_url || data.companyProfile.earnings_url}
+              </a>
+            ) : (
+              <span className="text-gray-400">-</span>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -51,6 +51,8 @@ export interface CompanyProfile {
   description?: string;
   website?: string;
   weburl?: string;
+  ir_website?: string;
+  earnings_url?: string;
   logo?: string;
   timestamp?: string;
   error?: string;
