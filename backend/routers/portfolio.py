@@ -38,21 +38,108 @@ class PortfolioSummary(BaseModel):
     holdings: List[dict] = Field(..., description="持仓详情")
 
 
+@router.get("/portfolio/{ticker}/fundamentals")
+async def get_stock_fundamentals(
+    ticker: str,
+    finnhub_service: Optional[FinnhubService] = Depends(get_finnhub_service)
+):
+    """
+    获取单只股票的基本面数据（公司概况、财务指标、技术指标）
+
+    Args:
+        ticker: 股票代码
+
+    Returns:
+        包含公司概况、财务指标和技术指标的字典
+    """
+    try:
+        if not finnhub_service:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Finnhub服务不可用"
+            )
+
+        # 获取公司概况
+        company_profile = finnhub_service.get_company_profile(ticker)
+        # 获取财务指标
+        financials = finnhub_service.get_financials(ticker)
+        # 获取技术指标
+        technical_indicators = finnhub_service.get_technical_indicators(ticker)
+
+        return {
+            "ticker": ticker,
+            "company_profile": company_profile,
+            "financials": financials,
+            "technical_indicators": technical_indicators,
+            "timestamp": finnhub_service.get_quote(ticker).get("timestamp")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取股票基本面数据失败: {str(e)}"
+        )
+
+
+@router.post("/portfolio/{ticker}/fundamentals/refresh")
+async def refresh_stock_fundamentals(
+    ticker: str,
+    finnhub_service: Optional[FinnhubService] = Depends(get_finnhub_service)
+):
+    """
+    手动刷新单只股票的基本面数据（不使用缓存）
+
+    Args:
+        ticker: 股票代码
+
+    Returns:
+        刷新后的基本面数据和成功消息
+    """
+    try:
+        if not finnhub_service:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Finnhub服务不可用"
+            )
+
+        # 强制刷新数据，不使用缓存
+        company_profile = finnhub_service.get_company_profile(ticker, use_cache=False)
+        financials = finnhub_service.get_financials(ticker, use_cache=False)
+        technical_indicators = finnhub_service.get_technical_indicators(ticker, use_cache=False)
+
+        return {
+            "message": "数据刷新成功",
+            "ticker": ticker,
+            "company_profile": company_profile,
+            "financials": financials,
+            "technical_indicators": technical_indicators,
+            "timestamp": finnhub_service.get_quote(ticker, use_cache=False).get("timestamp")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"刷新股票基本面数据失败: {str(e)}"
+        )
+
+
 @router.get("/portfolio")
 async def get_all_portfolio(
     portfolio_store: PortfolioStore = Depends(get_portfolio_store),
     finnhub_service: Optional[FinnhubService] = Depends(get_finnhub_service)
 ):
     """
-    获取所有持仓（包含实时价格和盈亏计算）
-    
+    获取所有持仓（包含实时价格、盈亏计算和数据状态信息）
+
     Returns:
-        持仓列表（含计算字段）
+        持仓列表（含计算字段和数据状态）
     """
     try:
         holdings = portfolio_store.get_all()
         result = []
-        
+
         for holding in holdings:
             # 获取当前价格
             current_price = 0.0
@@ -60,12 +147,18 @@ async def get_all_portfolio(
                 quote = finnhub_service.get_quote(holding.ticker)
                 if quote.get("success"):
                     current_price = quote.get("current_price", 0.0)
-            
+
             cost = holding.quantity * holding.cost_price
             market_value = holding.quantity * current_price
             profit_loss = market_value - cost
             profit_loss_percent = (profit_loss / cost * 100) if cost > 0 else 0.0
-            
+
+            # 数据状态信息
+            data_status = {
+                "last_updated": quote.get("timestamp") if (finnhub_service and quote.get("success")) else None,
+                "is_stale": False  # 默认数据不过期，可以根据实际情况判断
+            }
+
             result.append({
                 "ticker": holding.ticker,
                 "quantity": holding.quantity,
@@ -77,9 +170,10 @@ async def get_all_portfolio(
                 "profit_loss_percent": profit_loss_percent,
                 "note": holding.note,
                 "created_at": holding.created_at,
-                "updated_at": holding.updated_at
+                "updated_at": holding.updated_at,
+                "data_status": data_status
             })
-        
+
         return result
     except Exception as e:
         raise HTTPException(

@@ -1,11 +1,11 @@
 [
   {
     "ticker": "AAPL",
-    "quantity": 300,
+    "quantity": 500,
     "cost_price": 150.0,
     "note": "Test note",
-    "created_at": "2026-04-04T14:32:48.138399",
-    "updated_at": "2026-04-04T14:32:48.138405"
+    "created_at": "2026-04-04T18:09:32.411174",
+    "updated_at": "2026-04-04T18:09:32.411184"
   },
   {
     "ticker": "NVDA",
