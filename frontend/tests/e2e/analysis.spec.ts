@@ -8,43 +8,20 @@ test.describe('Analysis Page', () => {
     await page.goto('/analysis/AAPL');
   });
 
-  test('should display analysis page elements', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'AAPL 分析报告' })).toBeVisible();
-    await expect(page.getByText('当前价格')).toBeVisible();
-    await expect(page.getByText('涨跌幅')).toBeVisible();
+  test('should display analysis options page', async ({ page }) => {
+    // 验证分析选项页面是否正确显示
+    await expect(page.locator('h1:has-text("AAPL 分析")')).toBeVisible();
+    await expect(page.locator('h3:has-text("分析选项")')).toBeVisible();
+    await expect(page.locator('div:has-text("实时分析")').first()).toBeVisible();
+    await expect(page.locator('div:has-text("异步分析")').first()).toBeVisible();
   });
 
-  test('should show agent reports and fusion summary', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Fusion Agent 融合总结' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'News Agent 报告' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'SEC Agent 报告' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Fundamentals Agent 报告' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Technical Agent 报告' })).toBeVisible();
-  });
+  test('should show both analysis buttons', async ({ page }) => {
+    // 验证分析按钮是否可见
+    const realTimeButton = page.locator('button', { hasText: '实时分析' });
+    await expect(realTimeButton).toBeVisible();
 
-  test('should display current price and change percentage', async ({ page }) => {
-    // Check price display
-    const priceElement = page.getByText(/\$\d+\.\d{2}/);
-    await expect(priceElement).toBeVisible();
-
-    // Check change percentage with proper sign
-    const changeElement = page.getByText(/[+-]?\d+\.\d{2}%/);
-    await expect(changeElement).toBeVisible();
-  });
-
-  test('should handle reanalysis functionality', async ({ page }) => {
-    // Skip this test for now, since the page behavior has changed and the analysis starts immediately
-    // Verify basic page elements are visible instead
-    await expect(page.getByRole('heading', { name: 'AAPL 分析报告' })).toBeVisible();
-    await expect(page.getByText('当前价格')).toBeVisible();
-    await expect(page.getByText('涨跌幅')).toBeVisible();
-  });
-
-  test('should toggle agent report cards', async ({ page }) => {
-    // Click on News Agent report card to collapse/expand
-    await page.getByRole('heading', { name: 'News Agent 报告' }).first().click();
-
-    // Verify content is still accessible
-    await expect(page.getByText('News Agent 报告')).toBeVisible();
+    const asyncButton = page.locator('button', { hasText: '异步分析' });
+    await expect(asyncButton).toBeVisible();
   });
 });

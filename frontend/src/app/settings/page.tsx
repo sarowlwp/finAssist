@@ -10,6 +10,12 @@ import { settingsApi } from '@/lib/api'
 
 interface Settings {
   investment_style?: string
+  llm_config?: {
+    provider?: string
+    model?: string
+    temperature?: number
+    max_tokens?: number
+  }
   model_config?: {
     provider?: string
     model?: string
@@ -49,8 +55,15 @@ export default function SettingsPage() {
   const fetchSettings = async () => {
     try {
       setLoading(true)
-      const data = await settingsApi.get()
-      setSettings(data)
+      const [settingsData, apiKeysData] = await Promise.all([
+        settingsApi.get(),
+        settingsApi.getApiKeys()
+      ])
+
+      setSettings({
+        ...settingsData,
+        api_keys: apiKeysData
+      })
     } catch (err) {
       console.error('Failed to fetch settings:', err)
       // Mock data
@@ -91,7 +104,7 @@ export default function SettingsPage() {
   const handleSaveModelConfig = async () => {
     try {
       setSaving(true)
-      await settingsApi.updateModelConfig(settings.model_config || {})
+      await settingsApi.updateModelConfig((settings.llm_config || settings.model_config) || {})
       showMessage('success', '模型配置已保存')
     } catch (err) {
       showMessage('error', '保存失败，请重试')
@@ -174,10 +187,10 @@ export default function SettingsPage() {
                   <label className="block text-sm font-medium mb-1.5">Provider</label>
                   <Select
                     options={PROVIDER_OPTIONS}
-                    value={settings.model_config?.provider || 'openai'}
+                    value={(settings.llm_config || settings.model_config)?.provider || 'openai'}
                     onChange={(e) => setSettings({
                       ...settings,
-                      model_config: { ...settings.model_config, provider: e.target.value }
+                      model_config: { ...(settings.llm_config || settings.model_config), provider: e.target.value }
                     })}
                   />
                 </div>
@@ -186,10 +199,10 @@ export default function SettingsPage() {
                   <label className="block text-sm font-medium mb-1.5">Model 名称</label>
                   <Input
                     type="text"
-                    value={settings.model_config?.model || ''}
+                    value={(settings.llm_config || settings.model_config)?.model || ''}
                     onChange={(e) => setSettings({
                       ...settings,
-                      model_config: { ...settings.model_config, model: e.target.value }
+                      model_config: { ...(settings.llm_config || settings.model_config), model: e.target.value }
                     })}
                     placeholder="例如: gpt-4, gpt-3.5-turbo"
                   />
@@ -202,10 +215,10 @@ export default function SettingsPage() {
                     min="0"
                     max="2"
                     step="0.1"
-                    value={settings.model_config?.temperature || 0.7}
+                    value={(settings.llm_config || settings.model_config)?.temperature || 0.7}
                     onChange={(e) => setSettings({
                       ...settings,
-                      model_config: { ...settings.model_config, temperature: parseFloat(e.target.value) }
+                      model_config: { ...(settings.llm_config || settings.model_config), temperature: parseFloat(e.target.value) }
                     })}
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -219,10 +232,10 @@ export default function SettingsPage() {
                     type="number"
                     min="1"
                     step="100"
-                    value={settings.model_config?.max_tokens || 2000}
+                    value={(settings.llm_config || settings.model_config)?.max_tokens || 2000}
                     onChange={(e) => setSettings({
                       ...settings,
-                      model_config: { ...settings.model_config, max_tokens: parseInt(e.target.value) }
+                      model_config: { ...(settings.llm_config || settings.model_config), max_tokens: parseInt(e.target.value) }
                     })}
                   />
                   <p className="text-xs text-gray-500 mt-1">

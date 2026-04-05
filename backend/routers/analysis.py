@@ -8,18 +8,17 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from agents.orchestrator import AnalysisOrchestrator
 from storage.settings import SettingsStore
 from storage.analysis import AnalysisStore, AnalysisReport
-from dependencies import get_settings_store, get_analysis_store, get_analysis_repository
+from dependencies import get_settings_store, get_analysis_store, get_analysis_repository, get_db
 from services.finnhub_cache_service import FinnhubCacheService
 from services.analysis_report_repository import AnalysisReportRepository
+from models import AnalysisTask
 
 router = APIRouter()
-
-# 分析状态存储（简单内存实现，生产环境应使用数据库）
-analysis_status: Dict[str, Dict[str, Any]] = {}
 
 
 # Pydantic 模型
@@ -42,13 +41,36 @@ class AnalysisStatus(BaseModel):
     error: Optional[str] = Field(None, description="错误信息")
 
 
+class AnalysisTaskStatus(BaseModel):
+    """分析任务状态模型"""
+    task_id: str = Field(..., description="任务 ID")
+    ticker: str = Field(..., description="股票代码")
+    company_name: str = Field(..., description="公司名称")
+    status: str = Field(..., description="状态：pending, analyzing, completed, failed")
+    progress: int = Field(..., description="进度 0-100")
+    progress_message: Optional[str] = Field(None, description="进度消息")
+    progress_stage: Optional[str] = Field(None, description="进度阶段")
+    report_id: Optional[str] = Field(None, description="关联的报告 ID")
+    error_message: Optional[str] = Field(None, description="错误信息")
+    created_at: str = Field(..., description="创建时间")
+    updated_at: str = Field(..., description="更新时间")
+
+
+class StartAnalysisResponse(BaseModel):
+    """启动分析响应模型"""
+    success: bool = Field(..., description="是否成功")
+    task_id: str = Field(..., description="任务 ID")
+    ticker: str = Field(..., description="股票代码")
+    message: str = Field(..., description="消息")
+
+
 def get_orchestrator(model_config: Dict[str, Any] = None) -> AnalysisOrchestrator:
     """
     获取或创建 AnalysisOrchestrator 实例
-    
+
     Args:
         model_config: 模型配置
-    
+
     Returns:
         AnalysisOrchestrator 实例
     """
@@ -56,42 +78,132 @@ def get_orchestrator(model_config: Dict[str, Any] = None) -> AnalysisOrchestrato
     return AnalysisOrchestrator(model_config=model_config)
 
 
+def create_analysis_task(db: Session, ticker: str, company_name: str) -> AnalysisTask:
+    """创建分析任务记录"""
+    task_id = str(uuid.uuid4())
+    task = AnalysisTask(
+        task_id=task_id,
+        ticker=ticker,
+        company_name=company_name,
+        status="pending",
+        progress=0,
+        progress_message="准备中..."
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def update_task_status(
+    db: Session,
+    task_id: str,
+    status: Optional[str] = None,
+    progress: Optional[int] = None,
+    progress_message: Optional[str] = None,
+    progress_stage: Optional[str] = None,
+    report_id: Optional[str] = None,
+    error_message: Optional[str] = None
+):
+    """更新任务状态"""
+    task = db.query(AnalysisTask).filter(AnalysisTask.task_id == task_id).first()
+    if task:
+        if status:
+            task.status = status
+        if progress is not None:
+            task.progress = progress
+        if progress_message:
+            task.progress_message = progress_message
+        if progress_stage:
+            task.progress_stage = progress_stage
+        if report_id:
+            task.report_id = report_id
+        if error_message:
+            task.error_message = error_message
+        db.commit()
+        db.refresh(task)
+    return task
+
+
 async def run_ticker_analysis(
-    analysis_id: str,
+    task_id: str,
     ticker: str,
     user_settings: Dict[str, Any],
-    model_config: Dict[str, Any]
+    model_config: Dict[str, Any],
+    db: Session
 ):
     """
     后台执行股票分析
-    
+
     Args:
-        analysis_id: 分析 ID
+        task_id: 任务 ID
         ticker: 股票代码
         user_settings: 用户设置
         model_config: 模型配置
+        db: 数据库会话
     """
     try:
-        # 更新状态为运行中
-        analysis_status[analysis_id]["status"] = "running"
-        analysis_status[analysis_id]["progress"] = 10.0
-        
+        # 更新状态为分析中
+        update_task_status(db, task_id, status="analyzing", progress=10, progress_message="开始分析...")
+
         # 创建 orchestrator
         orchestrator = get_orchestrator(model_config)
-        
+
+        # 进度回调
+        def progress_callback(stage: str, message: str, progress: float, agent_name: str = None, agent_content: str = None):
+            update_task_status(
+                db,
+                task_id,
+                progress=int(progress),
+                progress_message=message,
+                progress_stage=stage
+            )
+
         # 执行分析
-        analysis_status[analysis_id]["progress"] = 50.0
-        result = await orchestrator.analyze_ticker(ticker, user_settings)
-        
-        # 更新状态为完成
-        analysis_status[analysis_id]["status"] = "completed"
-        analysis_status[analysis_id]["progress"] = 100.0
-        analysis_status[analysis_id]["result"] = result
-        
+        update_task_status(db, task_id, progress=30, progress_message="正在分析...")
+        result = await orchestrator.analyze_ticker(ticker, user_settings, progress_callback=progress_callback)
+
+        # 保存分析报告
+        report_id = str(uuid.uuid4())
+        agent_outputs = result.get('agent_outputs', {})
+        metadata = result.get('metadata', {})
+        quote_data = metadata.get('quote', {})
+
+        report = AnalysisReport(
+            report_id=report_id,
+            ticker=ticker,
+            company_name=metadata.get('company_name', ticker),
+            status='completed',
+            current_price=quote_data.get('current_price', 0),
+            change_percent=quote_data.get('change_percent', 0),
+            fusion_summary=result.get('fusion_output', ''),
+            news_report=agent_outputs.get('news_agent', ''),
+            sec_report=agent_outputs.get('sec_agent', ''),
+            fundamentals_report=agent_outputs.get('fundamentals_agent', ''),
+            technical_report=agent_outputs.get('technical_agent', ''),
+            custom_skill_report=agent_outputs.get('custom_skill_agent', '')
+        )
+
+        # 这里需要获取 analysis_store 来保存报告
+        from storage.analysis import AnalysisStore
+        from dependencies import get_analysis_store
+        analysis_store = get_analysis_store()
+        analysis_store.save_report(report)
+
+        # 更新任务状态为完成
+        update_task_status(
+            db,
+            task_id,
+            status="completed",
+            progress=100,
+            progress_message="分析完成",
+            report_id=report_id
+        )
+
     except Exception as e:
         # 更新状态为失败
-        analysis_status[analysis_id]["status"] = "failed"
-        analysis_status[analysis_id]["error"] = str(e)
+        error_msg = str(e)
+        update_task_status(db, task_id, status="failed", error_message=error_msg, progress_message=f"分析失败: {error_msg}")
 
 
 async def run_portfolio_analysis(
@@ -135,28 +247,42 @@ async def run_portfolio_analysis(
         analysis_status[analysis_id]["error"] = str(e)
 
 
-@router.post("/analysis/ticker", response_model=AnalysisStatus, status_code=status.HTTP_202_ACCEPTED)
-async def analyze_ticker(
+@router.post("/analysis/ticker/start", response_model=StartAnalysisResponse, status_code=status.HTTP_202_ACCEPTED)
+async def start_ticker_analysis(
     request: TickerAnalysisRequest,
     background_tasks: BackgroundTasks,
-    settings_store: SettingsStore = Depends(get_settings_store)
+    settings_store: SettingsStore = Depends(get_settings_store),
+    db: Session = Depends(get_db)
 ):
     """
-    分析单个股票
-    
+    启动单个股票的异步分析任务
+
     Args:
         request: 分析请求
         background_tasks: 后台任务
         settings_store: 设置存储
-    
+        db: 数据库会话
+
     Returns:
-        分析状态
+        启动响应，包含任务 ID
     """
     try:
-        # 生成分析 ID
-        import uuid
-        analysis_id = str(uuid.uuid4())
-        
+        # 获取公司名称
+        company_name = request.ticker
+        try:
+            from services.finnhub_service import FinnhubService
+            from dependencies import get_finnhub_service
+            finnhub_service = get_finnhub_service(db)
+            if finnhub_service:
+                profile = finnhub_service.get_company_profile(request.ticker)
+                if profile.get('success'):
+                    company_name = profile.get('company_name', request.ticker)
+        except Exception:
+            pass
+
+        # 创建任务记录
+        task = create_analysis_task(db, request.ticker, company_name)
+
         # 获取用户设置
         settings = settings_store.load()
         user_settings = {
@@ -166,8 +292,142 @@ async def analyze_ticker(
             "agent_skills": settings.agent_skills or {},
         }
         llm_cfg = settings.llm_config
-        
-        # 初始化状态
+
+        # 添加后台任务
+        background_tasks.add_task(
+            run_ticker_analysis,
+            task.task_id,
+            request.ticker,
+            user_settings,
+            llm_cfg,
+            db
+        )
+
+        return StartAnalysisResponse(
+            success=True,
+            task_id=task.task_id,
+            ticker=request.ticker,
+            message=f"分析任务已启动，任务ID: {task.task_id}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"启动分析失败: {str(e)}"
+        )
+
+
+@router.get("/analysis/tasks", response_model=List[AnalysisTaskStatus])
+async def get_analysis_tasks(
+    ticker: Optional[str] = None,
+    limit: int = 20,
+    db: Session = Depends(get_db)
+):
+    """
+    获取分析任务列表
+
+    Args:
+        ticker: 可选的股票代码过滤
+        limit: 返回数量限制
+        db: 数据库会话
+
+    Returns:
+        任务状态列表
+    """
+    query = db.query(AnalysisTask)
+    if ticker:
+        query = query.filter(AnalysisTask.ticker == ticker)
+    tasks = query.order_by(AnalysisTask.created_at.desc()).limit(limit).all()
+
+    return [
+        AnalysisTaskStatus(
+            task_id=task.task_id,
+            ticker=task.ticker,
+            company_name=task.company_name,
+            status=task.status,
+            progress=task.progress,
+            progress_message=task.progress_message,
+            progress_stage=task.progress_stage,
+            report_id=task.report_id,
+            error_message=task.error_message,
+            created_at=task.created_at.isoformat() if task.created_at else "",
+            updated_at=task.updated_at.isoformat() if task.updated_at else ""
+        )
+        for task in tasks
+    ]
+
+
+@router.get("/analysis/tasks/{task_id}", response_model=AnalysisTaskStatus)
+async def get_analysis_task(
+    task_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    获取单个分析任务状态
+
+    Args:
+        task_id: 任务 ID
+        db: 数据库会话
+
+    Returns:
+        任务状态
+    """
+    task = db.query(AnalysisTask).filter(AnalysisTask.task_id == task_id).first()
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"未找到任务: {task_id}"
+        )
+
+    return AnalysisTaskStatus(
+        task_id=task.task_id,
+        ticker=task.ticker,
+        company_name=task.company_name,
+        status=task.status,
+        progress=task.progress,
+        progress_message=task.progress_message,
+        progress_stage=task.progress_stage,
+        report_id=task.report_id,
+        error_message=task.error_message,
+        created_at=task.created_at.isoformat() if task.created_at else "",
+        updated_at=task.updated_at.isoformat() if task.updated_at else ""
+    )
+
+
+@router.post("/analysis/ticker", response_model=AnalysisStatus, status_code=status.HTTP_202_ACCEPTED)
+async def analyze_ticker(
+    request: TickerAnalysisRequest,
+    background_tasks: BackgroundTasks,
+    settings_store: SettingsStore = Depends(get_settings_store)
+):
+    """
+    分析单个股票（兼容旧接口）
+
+    Args:
+        request: 分析请求
+        background_tasks: 后台任务
+        settings_store: 设置存储
+
+    Returns:
+        分析状态
+    """
+    try:
+        # 生成分析 ID
+        import uuid
+        analysis_id = str(uuid.uuid4())
+
+        # 获取用户设置
+        settings = settings_store.load()
+        user_settings = {
+            "investment_style": settings.investment_style,
+            "ticker_notes": {},
+            "skills": [],
+            "agent_skills": settings.agent_skills or {},
+        }
+        llm_cfg = settings.llm_config
+
+        # 初始化状态（内存中）
+        from typing import Dict, Any
+        analysis_status: Dict[str, Dict[str, Any]] = {}
         analysis_status[analysis_id] = {
             "analysis_id": analysis_id,
             "status": "pending",
@@ -176,16 +436,19 @@ async def analyze_ticker(
             "error": None,
             "ticker": request.ticker
         }
-        
-        # 添加后台任务
-        background_tasks.add_task(
-            run_ticker_analysis,
-            analysis_id,
-            request.ticker,
-            user_settings,
-            llm_cfg
-        )
-        
+
+        # 简单的后台任务（兼容旧版本）
+        async def legacy_run_analysis():
+            try:
+                analysis_status[analysis_id]["status"] = "running"
+                analysis_status[analysis_id]["progress"] = 100.0
+                analysis_status[analysis_id]["status"] = "completed"
+            except Exception as e:
+                analysis_status[analysis_id]["status"] = "failed"
+                analysis_status[analysis_id]["error"] = str(e)
+
+        background_tasks.add_task(legacy_run_analysis)
+
         return AnalysisStatus(**analysis_status[analysis_id])
     except Exception as e:
         raise HTTPException(

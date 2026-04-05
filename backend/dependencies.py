@@ -48,11 +48,11 @@ def get_settings_store() -> SettingsStore:
         _settings_data_dir = config.DATA_DIR
     return _settings_store
 
-def get_finnhub_service() -> Optional[FinnhubService]:
+def get_finnhub_service(db: Session = Depends(get_db)) -> Optional[FinnhubService]:
     """获取 FinnhubService 单例"""
     global _finnhub_service
     if _finnhub_service is None and config.FINNHUB_API_KEY:
-        _finnhub_service = FinnhubService(config.FINNHUB_API_KEY)
+        _finnhub_service = FinnhubService(config.FINNHUB_API_KEY, db)
     return _finnhub_service
 
 def get_model_adapter() -> ModelAdapter:

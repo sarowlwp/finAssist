@@ -363,7 +363,7 @@ export default function AgentsPage() {
             </CardHeader>
             <CardContent className="pt-0 px-4 pb-4">
               {loadingAgents ? (
-                <div className="text-center py-3 text-gray-400 dark:text-gray-500">加载中...</div>
+                <div className="text-center py-3 text-muted-foreground">加载中...</div>
               ) : (
                 <div className="space-y-1.5">
                   {agents.map((agent) => (
@@ -372,8 +372,8 @@ export default function AgentsPage() {
                         onClick={() => setSelectedAgent(agent.name)}
                         className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
                           selectedAgent === agent.name
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-card hover:bg-accent'
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -382,14 +382,14 @@ export default function AgentsPage() {
                             <Badge variant="secondary" className="text-xs">自定义</Badge>
                           )}
                         </div>
-                        <div className={`text-xs ${selectedAgent === agent.name ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                        <div className={`text-xs ${selectedAgent === agent.name ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                           {agent.description}
                         </div>
                       </button>
                       {!agent.builtin && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteAgent(agent.name) }}
-                          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600 text-xs px-1.5 py-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30"
+                          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive/80 text-xs px-1.5 py-0.5 rounded hover:bg-destructive/10"
                           title="删除 Agent"
                         >
                           ✕
@@ -401,7 +401,7 @@ export default function AgentsPage() {
               )}
 
               {/* 新增 Agent 按钮 */}
-              <div className="mt-3 pt-3 border-t dark:border-gray-700">
+              <div className="mt-3 pt-3 border-t">
                 <Button
                   onClick={() => setShowCreateAgent(true)}
                   variant="outline"
@@ -443,7 +443,7 @@ export default function AgentsPage() {
             </CardHeader>
             <CardContent className="pt-0 px-4 pb-4">
               {/* Model Config */}
-              <div className="mb-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+              <div className="mb-3 p-3 bg-muted rounded-lg">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Provider</label>
@@ -475,9 +475,9 @@ export default function AgentsPage() {
               </div>
 
               {/* Messages */}
-              <div className="h-80 overflow-y-auto mb-3 p-3 bg-white dark:bg-slate-800 rounded-lg border dark:border-gray-700">
+              <div className="h-80 overflow-y-auto mb-3 p-3 bg-card rounded-lg border">
                 {messages.length === 0 ? (
-                  <div className="text-center text-gray-400 dark:text-gray-500 py-6">
+                  <div className="text-center text-muted-foreground py-6">
                     开始与 {selectedAgent} 对话
                   </div>
                 ) : (
@@ -490,8 +490,8 @@ export default function AgentsPage() {
                         <div
                           className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${
                             msg.role === 'user'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-800 dark:bg-slate-700 dark:text-gray-200'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-secondary text-secondary-foreground'
                           }`}
                         >
                           <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -544,13 +544,13 @@ export default function AgentsPage() {
             {loadingSkills ? (
               <div className="text-center py-3">加载中...</div>
             ) : skills.length === 0 ? (
-              <div className="text-center py-3 text-gray-500 dark:text-gray-400">暂无已安装的技能</div>
+              <div className="text-center py-3 text-muted-foreground">暂无已安装的技能</div>
             ) : (
               <div className="space-y-1.5">
                 {skills.map((skill) => (
                   <div
                     key={skill.name}
-                    className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                    className="flex items-center justify-between p-2 bg-muted rounded-lg"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -559,9 +559,9 @@ export default function AgentsPage() {
                           {skill.source === 'github' ? 'GitHub' : '手动创建'}
                         </Badge>
                       </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{skill.description}</div>
+                      <div className="text-xs text-muted-foreground truncate">{skill.description}</div>
                       {skill.source_url && (
-                        <div className="text-xs text-blue-500 truncate mt-0.5">{skill.source_url}</div>
+                        <div className="text-xs text-primary truncate mt-0.5">{skill.source_url}</div>
                       )}
                     </div>
                     <Button
@@ -587,8 +587,8 @@ export default function AgentsPage() {
                   onClick={() => setInstallTab('create')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     installTab === 'create'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-100 text-gray-600 hover:bg-slate-200'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                   }`}
                 >
                   ✏️ 手动创建
@@ -597,8 +597,8 @@ export default function AgentsPage() {
                   onClick={() => setInstallTab('github')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     installTab === 'github'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-100 text-gray-600 hover:bg-slate-200'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                   }`}
                 >
                   🔗 从 GitHub 安装
@@ -643,7 +643,7 @@ export default function AgentsPage() {
                     value={githubUrl}
                     onChange={(e) => setGithubUrl(e.target.value)}
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     支持 GitHub 仓库链接，系统将自动克隆仓库并读取 SKILL.md 或 README.md 作为技能描述
                   </p>
                   <Button
@@ -678,7 +678,7 @@ export default function AgentsPage() {
               value={newAgent.agent_key}
               onChange={(e) => setNewAgent({ ...newAgent, agent_key: e.target.value })}
             />
-            <p className="text-xs text-gray-500 mt-1">唯一标识符，创建后不可修改</p>
+            <p className="text-xs text-muted-foreground mt-1">唯一标识符，创建后不可修改</p>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">显示名称 <span className="text-red-500">*</span></label>
@@ -713,7 +713,7 @@ export default function AgentsPage() {
               onChange={(e) => setNewAgent({ ...newAgent, user_input_template: e.target.value })}
               rows={3}
             />
-            <p className="text-xs text-gray-500 mt-1">留空时使用通用模板</p>
+            <p className="text-xs text-muted-foreground mt-1">留空时使用通用模板</p>
           </div>
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button

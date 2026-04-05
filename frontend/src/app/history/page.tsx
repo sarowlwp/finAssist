@@ -9,6 +9,20 @@ import { analysisApi } from '@/lib/api'
 import { format } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 
+interface AnalysisTask {
+  task_id: string
+  ticker: string
+  company_name: string
+  status: string
+  progress: number
+  progress_message: string
+  progress_stage?: string
+  report_id?: string
+  error_message?: string
+  created_at: string
+  updated_at: string
+}
+
 interface AnalysisReport {
   report_id: string
   ticker: string
@@ -27,23 +41,32 @@ interface AnalysisReport {
 
 export default function HistoryPage() {
   const [reports, setReports] = useState<AnalysisReport[]>([])
+  const [tasks, setTasks] = useState<AnalysisTask[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTicker, setSearchTicker] = useState('')
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
+  const [expandedReports, setExpandedReports] = useState<Set<string>>(new Set())
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [showTasks, setShowTasks] = useState(true)
 
   useEffect(() => {
-    fetchReports()
+    fetchData()
   }, [])
 
-  const fetchReports = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true)
-      const data = await analysisApi.getReports()
+      const [reportsData, tasksData] = await Promise.all([
+        analysisApi.getReports(),
+        analysisApi.getAnalysisTasks()
+      ])
       // 确保数据是数组类型
-      setReports(Array.isArray(data) ? data : [])
+      setReports(Array.isArray(reportsData) ? reportsData : [])
+      setTasks(Array.isArray(tasksData) ? tasksData : [])
     } catch (err) {
-      console.error('Failed to fetch reports:', err)
+      console.error('Failed to fetch data:', err)
       setReports([])
+      setTasks([])
     } finally {
       setLoading(false)
     }
@@ -79,6 +102,26 @@ export default function HistoryPage() {
     }
   }
 
+  const toggleReportExpanded = (reportId: string) => {
+    const newExpanded = new Set(expandedReports)
+    if (newExpanded.has(reportId)) {
+      newExpanded.delete(reportId)
+    } else {
+      newExpanded.add(reportId)
+    }
+    setExpandedReports(newExpanded)
+  }
+
+  const toggleSectionExpanded = (sectionKey: string) => {
+    const newExpanded = new Set(expandedSections)
+    if (newExpanded.has(sectionKey)) {
+      newExpanded.delete(sectionKey)
+    } else {
+      newExpanded.add(sectionKey)
+    }
+    setExpandedSections(newExpanded)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -86,6 +129,13 @@ export default function HistoryPage() {
       </div>
     )
   }
+
+  // 筛选任务列表
+  const filteredTasks = searchTicker && Array.isArray(tasks)
+    ? tasks.filter(task => task.ticker.toLowerCase().includes(searchTicker.toLowerCase()))
+    : Array.isArray(tasks)
+    ? tasks
+    : []
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
@@ -95,7 +145,7 @@ export default function HistoryPage() {
         <Card className="mb-4">
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-lg">搜索和筛选</CardTitle>
-            <CardDescription className="text-sm">查找特定股票的分析报告</CardDescription>
+            <CardDescription className="text-sm">查找特定股票的分析报告和任务</CardDescription>
           </CardHeader>
           <CardContent className="pt-0 px-4 pb-4">
             <div className="flex flex-col md:flex-row gap-3">
@@ -106,10 +156,83 @@ export default function HistoryPage() {
                 onChange={(e) => setSearchTicker(e.target.value)}
                 className="max-w-md"
               />
-              <Button onClick={fetchReports} size="sm">刷新数据</Button>
+              <Button onClick={fetchData} size="sm">刷新数据</Button>
+              <Button variant="outline" size="sm" onClick={() => setShowTasks(!showTasks)}>
+                {showTasks ? '显示报告' : '显示任务'}
+              </Button>
             </div>
           </CardContent>
         </Card>
+
+        {/* 任务列表 */}
+        {showTasks && filteredTasks.length > 0 && (
+          <Card className="mb-4">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">分析任务状态</CardTitle>
+              <CardDescription className="text-sm">共 {filteredTasks.length} 个任务</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 px-4 pb-4">
+              <div className="space-y-3">
+                {filteredTasks.map((task) => (
+                  <div
+                    key={task.task_id}
+                    className="border rounded-lg p-3 dark:border-gray-700"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{task.ticker}</Badge>
+                        <Badge variant={
+                          task.status === 'completed' ? 'default' :
+                          task.status === 'analyzing' ? 'secondary' :
+                          task.status === 'failed' ? 'destructive' : 'outline'
+                        }>
+                          {task.status === 'pending' ? '待处理' :
+                           task.status === 'analyzing' ? '分析中' :
+                           task.status === 'completed' ? '已完成' : '失败'}
+                        </Badge>
+                      </div>
+                      {task.status === 'analyzing' && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-gray-500">{task.progress}%</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm font-medium mb-1">{task.company_name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      创建时间: {formatDate(task.created_at)}
+                    </p>
+                    {task.progress_message && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {task.progress_message}
+                      </p>
+                    )}
+                    {task.error_message && (
+                      <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                        错误: {task.error_message}
+                      </p>
+                    )}
+                    {task.report_id && (
+                      <div className="mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document
+                              .getElementById(`report-${task.report_id}`)
+                              ?.scrollIntoView({ behavior: 'smooth' })
+                          }
+                        >
+                          查看报告
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* 报告列表 */}
@@ -190,7 +313,7 @@ export default function HistoryPage() {
             <CardContent className="pt-0 px-4 pb-4">
               <div className="space-y-3">
                 {filteredReports.length === 0 ? (
-                  <div className="text-center py-10 text-gray-400 dark:text-gray-500">
+                  <div className="text-center py-10 text-muted-foreground">
                     选择一个报告查看详情
                   </div>
                 ) : (
@@ -209,12 +332,12 @@ export default function HistoryPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                         <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">创建时间</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">创建时间</p>
                           <p className="font-medium text-sm">{formatDate(report.created_at)}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">当前价格</p>
-                          <p className="font-medium text-sm">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">当前价格</p>
+                          <p className="font-medium text-sm font-mono-nums">
                             ${report.current_price.toFixed(2)}
                             <span
                               className={
@@ -231,11 +354,24 @@ export default function HistoryPage() {
 
                       {report.fusion_summary && (
                         <div className="mb-4">
-                          <h4 className="text-base font-semibold mb-1.5 text-blue-600 dark:text-blue-400">
-                            Fusion Agent 融合总结
-                          </h4>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <h4 className="text-base font-semibold text-blue-600 dark:text-blue-400">
+                              Fusion Agent 融合总结
+                            </h4>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleSectionExpanded(`fusion-${report.report_id}`)}
+                            >
+                              {expandedSections.has(`fusion-${report.report_id}`) ? '收起' : '展开'}
+                            </Button>
+                          </div>
                           <div className="prose prose-slate dark:prose-invert max-w-none text-sm">
-                            {report.fusion_summary.substring(0, 200)}...
+                            {expandedSections.has(`fusion-${report.report_id}`) ? (
+                              report.fusion_summary
+                            ) : (
+                              `${report.fusion_summary.substring(0, 200)}...`
+                            )}
                           </div>
                         </div>
                       )}
@@ -247,21 +383,39 @@ export default function HistoryPage() {
                           { title: 'Fundamentals Agent', content: report.fundamentals_report, emoji: '📊' },
                           { title: 'Technical Agent', content: report.technical_report, emoji: '📈' },
                           { title: 'Custom Skill Agent', content: report.custom_skill_report, emoji: '🔧' },
-                        ].map(({ title, content, emoji }) => (
-                          <div key={title} className="border rounded-lg p-2.5 dark:border-gray-700">
-                            <h5 className="font-semibold mb-1.5 flex items-center gap-2 text-sm">
-                              <span>{emoji}</span>
-                              {title}
-                            </h5>
-                            {content ? (
-                              <p className="text-xs text-gray-600 dark:text-gray-400">
-                                {content.substring(0, 100)}...
-                              </p>
-                            ) : (
-                              <p className="text-xs text-gray-400 italic">暂无内容</p>
-                            )}
-                          </div>
-                        ))}
+                        ].map(({ title, content, emoji }) => {
+                          const sectionKey = `${title.toLowerCase().replace(/\s+/g, '-')}-${report.report_id}`
+                          return (
+                            <div key={title} className="border rounded-lg p-2.5">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <h5 className="font-semibold flex items-center gap-2 text-sm">
+                                  <span>{emoji}</span>
+                                  {title}
+                                </h5>
+                                {content && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => toggleSectionExpanded(sectionKey)}
+                                  >
+                                    {expandedSections.has(sectionKey) ? '收起' : '展开'}
+                                  </Button>
+                                )}
+                              </div>
+                              {content ? (
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {expandedSections.has(sectionKey) ? (
+                                    content
+                                  ) : (
+                                    `${content.substring(0, 100)}...`
+                                  )}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-gray-400 italic">暂无内容</p>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
                   ))

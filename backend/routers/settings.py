@@ -16,7 +16,7 @@ router = APIRouter()
 # Pydantic 模型
 class InvestmentStyleUpdate(BaseModel):
     """投资风格更新请求模型"""
-    investment_style: str = Field(..., description="投资风格：conservative, balanced, aggressive")
+    investment_style: str = Field(..., description="投资风格：conservative, growth, value, balanced")
 
 
 class ModelConfigUpdate(BaseModel):
@@ -28,13 +28,6 @@ class ModelConfigUpdate(BaseModel):
 
 class AgentModelConfigUpdate(BaseModel):
     """Agent 级模型配置更新请求模型"""
-    agent_name: str = Field(..., description="Agent 名称")
-    provider: str = Field(..., description="模型提供商")
-    model: str = Field(..., description="模型名称")
-
-class AgentModelConfigUpdate(BaseModel):
-    """Agent 级模型配置更新请求模型"""
-    agent_name: str = Field(..., description="Agent 名称")
     provider: str = Field(..., description="模型提供商")
     model: str = Field(..., description="模型名称")
 
@@ -83,7 +76,7 @@ async def update_investment_style(
     """
     try:
         # 验证投资风格
-        valid_styles = ["conservative", "balanced", "aggressive"]
+        valid_styles = ["conservative", "growth", "value", "balanced"]
         if update.investment_style not in valid_styles:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -181,10 +174,10 @@ async def validate_provider(
 ):
     """
     验证某个 provider 的 API key 是否配置
-    
+
     Args:
         provider: 提供商名称
-    
+
     Returns:
         验证结果
     """
@@ -194,9 +187,9 @@ async def validate_provider(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"不支持的模型提供商: {provider}"
             )
-        
+
         provider_config = config.PROVIDER_CONFIGS.get(provider, {})
-        
+
         return ProviderValidation(
             provider=provider,
             configured=model_adapter.validate_api_key(provider),
@@ -211,17 +204,39 @@ async def validate_provider(
             detail=f"验证提供商失败: {str(e)}"
         )
 
-@router.get("/settings/agent-model-configs/{agent_name}")
+
+@router.get("/settings/api-keys", response_model=Dict[str, bool])
+async def get_api_keys_status(
+    model_adapter: ModelAdapter = Depends(get_model_adapter)
+):
+    """
+    获取所有提供商的 API Key 配置状态
+
+    Returns:
+        提供商名称到配置状态的字典
+    """
+    try:
+        api_keys_status = {}
+        for provider in model_adapter.get_supported_providers():
+            api_keys_status[provider] = model_adapter.validate_api_key(provider)
+        return api_keys_status
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取 API Key 状态失败: {str(e)}"
+        )
+
+@router.get("/settings/agents/{agent_name}/model-config")
 async def get_agent_model_config(
     agent_name: str,
     settings_store: SettingsStore = Depends(get_settings_store)
 ):
     """
     获取指定 Agent 的模型配置
-    
+
     Args:
         agent_name: Agent 名称
-    
+
     Returns:
         Agent 模型配置
     """
@@ -236,7 +251,7 @@ async def get_agent_model_config(
             detail=f"获取 Agent 模型配置失败: {str(e)}"
         )
 
-@router.put("/settings/agent-model-configs/{agent_name}", response_model=UserSettings)
+@router.put("/settings/agents/{agent_name}/model-config", response_model=UserSettings)
 async def update_agent_model_config(
     agent_name: str,
     update: AgentModelConfigUpdate,

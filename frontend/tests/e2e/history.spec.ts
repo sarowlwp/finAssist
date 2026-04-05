@@ -11,24 +11,16 @@ test.describe('History Page', () => {
   test('should display history page elements', async ({ page }) => {
     // Check main elements
     await expect(page.locator('h1:has-text("分析报告历史")')).toBeVisible();
-    await expect(page.locator('h3:has-text("搜索和筛选")')).toBeVisible();
     await expect(page.getByPlaceholder('搜索股票代码...')).toBeVisible();
     await expect(page.locator('button:has-text("刷新数据")')).toBeVisible();
     await expect(page.locator('h3:has-text("报告列表")')).toBeVisible();
     await expect(page.locator('h3:has-text("报告详情")')).toBeVisible();
   });
 
-  test('should display reports list and details', async ({ page }) => {
-    // Check report list and detail sections
-    const listCard = page.locator('h3:has-text("报告列表")').locator('..').locator('..');
-    await expect(listCard).toBeVisible();
-
-    const detailCard = page.locator('h3:has-text("报告详情")').locator('..').locator('..');
-    await expect(detailCard).toBeVisible();
-
-    // Check detail content
-    const detailContent = page.getByText('选择一个报告查看详情');
-    await expect(detailContent).toBeVisible();
+  test('should display toggle button for tasks and reports', async ({ page }) => {
+    // Check toggle button exists (either text works)
+    const toggleButton = page.locator('button').filter({ hasText: /显示(报告|任务)/ });
+    await expect(toggleButton).toBeVisible();
   });
 
   test('should handle search functionality', async ({ page }) => {

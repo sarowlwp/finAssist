@@ -73,3 +73,24 @@ class PortfolioHolding(Base):
     note = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AnalysisTask(Base):
+    """
+    分析任务模型
+
+    存储分析任务的状态和元数据，支持异步任务管理。
+    """
+    __tablename__ = "analysis_tasks"
+
+    task_id = Column(String(36), primary_key=True, index=True)
+    ticker = Column(String(20), index=True, nullable=False)
+    company_name = Column(String(255), nullable=False)
+    status = Column(String(20), nullable=False, default="pending")  # pending, analyzing, completed, failed
+    progress = Column(Integer, nullable=False, default=0)
+    progress_message = Column(String(255), nullable=True)
+    progress_stage = Column(String(50), nullable=True)
+    report_id = Column(String(36), nullable=True)
+    error_message = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,13 +27,30 @@ interface AnalysisData {
   status?: string
 }
 
+interface AnalysisTask {
+  task_id: string
+  ticker: string
+  company_name: string
+  status: string
+  progress: number
+  progress_message: string
+  progress_stage?: string
+  report_id?: string
+  error_message?: string
+  created_at: string
+  updated_at: string
+}
+
 export default function AnalysisPage() {
   const params = useParams()
+  const router = useRouter()
   const ticker = params.ticker as string
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showOptions, setShowOptions] = useState(false)
+  const [taskInfo, setTaskInfo] = useState<AnalysisTask | null>(null)
 
   // 流式分析进度
   const [progress, setProgress] = useState(0)
@@ -50,108 +67,129 @@ export default function AnalysisPage() {
     custom_skill: false
   })
 
+  // 启动异步分析任务
+  const handleStartAsyncAnalysis = async () => {
+    try {
+      const response = await analysisApi.startTickerAnalysis(ticker)
+      if (response.success) {
+        setTaskInfo({
+          task_id: response.task_id,
+          ticker: response.ticker,
+          company_name: analysis?.company_name || ticker,
+          status: 'pending',
+          progress: 0,
+          progress_message: '任务已启动，请前往历史页面查看',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        setShowOptions(false)
+        // 显示任务信息并提供跳转链接
+        setTimeout(() => {
+          router.push('/history')
+        }, 3000)
+      }
+    } catch (err) {
+      setError('启动分析任务失败')
+      console.error('Failed to start analysis:', err)
+    }
+  }
+
   // Handle reanalyze with useCallback to fix dependency issues
   const handleReanalyze = useCallback(() => {
-    try {
-      setAnalyzing(true)
-      setProgress(0)
-      setProgressMessage('开始分析...')
-      setProgressStage('')
+    setAnalyzing(true)
+    setProgress(0)
+    setProgressMessage('开始分析...')
+    setProgressStage('')
 
-      // 清空之前的分析结果，准备接收新的分析结果
-      setAnalysis(prev => prev ? {
-        ...prev,
-        fusion_summary: '',
-        news_report: '',
-        sec_report: '',
-        fundamentals_report: '',
-        technical_report: '',
-        custom_skill_report: '',
-        status: 'analyzing'
-      } : null)
+    // 清空之前的分析结果，准备接收新的分析结果
+    setAnalysis(prev => prev ? {
+      ...prev,
+      fusion_summary: '',
+      news_report: '',
+      sec_report: '',
+      fundamentals_report: '',
+      technical_report: '',
+      custom_skill_report: '',
+      status: 'analyzing'
+    } : null)
 
-      // 使用流式 API
-      cancelStreamRef.current = analysisApi.analyzeTickerStream(
-        ticker,
-        (data: StreamEvent) => {
-          const agentFieldMap: Record<string, keyof AnalysisData> = {
-            'news_agent': 'news_report',
-            'sec_agent': 'sec_report',
-            'fundamentals_agent': 'fundamentals_report',
-            'technical_agent': 'technical_report',
-            'custom_skill_agent': 'custom_skill_report',
-          }
+    // 使用流式 API
+    cancelStreamRef.current = analysisApi.analyzeTickerStream(
+      ticker,
+      (data: StreamEvent) => {
+        const agentFieldMap: Record<string, keyof AnalysisData> = {
+          'news_agent': 'news_report',
+          'sec_agent': 'sec_report',
+          'fundamentals_agent': 'fundamentals_report',
+          'technical_agent': 'technical_report',
+          'custom_skill_agent': 'custom_skill_report',
+        }
 
-          if (data.type === 'start') {
-            setProgress(data.progress || 0)
-            setProgressMessage(data.message || '开始分析...')
-          } else if (data.type === 'progress') {
-            setProgress(data.progress)
-            setProgressMessage(data.message)
-            setProgressStage(data.stage)
+        if (data.type === 'start') {
+          setProgress(data.progress || 0)
+          setProgressMessage(data.message || '开始分析...')
+        } else if (data.type === 'progress') {
+          setProgress(data.progress)
+          setProgressMessage(data.message)
+          setProgressStage(data.stage)
 
-            // 实时更新子 Agent 卡片：当某个 Agent 完成时，立即显示其报告
-            if (data.agent_name && data.agent_content) {
-              const field = agentFieldMap[data.agent_name]
-              if (field) {
-                setAnalysis(prev => ({
-                  ...(prev || { ticker, status: 'analyzing' }),
-                  ticker: prev?.ticker || ticker,
-                  [field]: data.agent_content,
-                  status: 'analyzing'
-                }))
-              }
+          // 实时更新子 Agent 卡片：当某个 Agent 完成时，立即显示其报告
+          if (data.agent_name && data.agent_content) {
+            const field = agentFieldMap[data.agent_name]
+            if (field) {
+              setAnalysis(prev => ({
+                ...(prev || { ticker, status: 'analyzing' }),
+                ticker: prev?.ticker || ticker,
+                [field]: data.agent_content,
+                status: 'analyzing'
+              }))
             }
-          } else if (data.type === 'agent_result') {
-            // 后端分拆发送的各 Agent 最终输出
-            if (data.agent_name && data.agent_content) {
-              const field = agentFieldMap[data.agent_name]
-              if (field) {
-                setAnalysis(prev => ({
-                  ...(prev || { ticker, status: 'analyzing' }),
-                  ticker: prev?.ticker || ticker,
-                  [field]: data.agent_content,
-                  status: 'analyzing'
-                }))
-              }
-            }
-          } else if (data.type === 'fusion_result') {
-            // 后端分拆发送的 Fusion 输出
-            const fusionContent = typeof data.fusion_output === 'string'
-              ? data.fusion_output
-              : JSON.stringify(data.fusion_output || '')
-            setAnalysis(prev => ({
-              ...(prev || { ticker, status: 'analyzing' }),
-              ticker: prev?.ticker || ticker,
-              fusion_summary: fusionContent,
-              status: 'analyzing'
-            }))
-            setProgress(95)
-            setProgressMessage('Fusion Agent 融合完成')
-            setProgressStage('fusion')
-          } else if (data.type === 'complete') {
-            setProgress(100)
-            setProgressMessage('分析完成')
-            // 标记分析完成（数据已通过 agent_result / fusion_result 事件更新）
-            setAnalysis(prev => prev ? { ...prev, status: 'completed' } : null)
-            setAnalyzing(false)
-          } else if (data.type === 'error') {
-            setProgressMessage(`错误: ${data.message}`)
-            setAnalyzing(false)
           }
-        },
-        (error) => {
-          setProgressMessage(`错误: ${error}`)
+        } else if (data.type === 'agent_result') {
+          // 后端分拆发送的各 Agent 最终输出
+          if (data.agent_name && data.agent_content) {
+            const field = agentFieldMap[data.agent_name]
+            if (field) {
+              setAnalysis(prev => ({
+                ...(prev || { ticker, status: 'analyzing' }),
+                ticker: prev?.ticker || ticker,
+                [field]: data.agent_content,
+                status: 'analyzing'
+              }))
+            }
+          }
+        } else if (data.type === 'fusion_result') {
+          // 后端分拆发送的 Fusion 输出
+          const fusionContent = typeof data.fusion_output === 'string'
+            ? data.fusion_output
+            : JSON.stringify(data.fusion_output || '')
+          setAnalysis(prev => ({
+            ...(prev || { ticker, status: 'analyzing' }),
+            ticker: prev?.ticker || ticker,
+            fusion_summary: fusionContent,
+            status: 'analyzing'
+          }))
+          setProgress(95)
+          setProgressMessage('Fusion Agent 融合完成')
+          setProgressStage('fusion')
+        } else if (data.type === 'complete') {
+          setProgress(100)
+          setProgressMessage('分析完成')
+          // 标记分析完成（数据已通过 agent_result / fusion_result 事件更新）
+          setAnalysis(prev => prev ? { ...prev, status: 'completed' } : null)
+          setAnalyzing(false)
+        } else if (data.type === 'error') {
+          setProgressMessage(`错误: ${data.message}`)
           setAnalyzing(false)
         }
-      )
-    } catch (err) {
-      alert('重新分析失败，请重试')
-      console.error('Failed to reanalyze:', err)
-      setAnalyzing(false)
-    }
+      },
+      (error) => {
+        setProgressMessage(`错误: ${error}`)
+        setAnalyzing(false)
+      }
+    )
   }, [ticker])
-  
+
   // 取消分析
   const handleCancelAnalysis = () => {
     if (cancelStreamRef.current) {
@@ -191,16 +229,14 @@ export default function AnalysisPage() {
       }
 
       setAnalysis(initialAnalysis)
-
-      // Start analysis immediately
-      handleReanalyze()
+      setShowOptions(true)
     } catch (err) {
       setError('加载分析数据失败')
       console.error('Failed to fetch analysis:', err)
     } finally {
       setLoading(false)
     }
-  }, [ticker, handleReanalyze])
+  }, [ticker])
 
   // Load data on initial render
   useEffect(() => {
@@ -246,6 +282,144 @@ export default function AnalysisPage() {
     )
   }
 
+  if (showOptions) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold mb-6">{ticker} 分析</h1>
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>分析选项</CardTitle>
+              <CardDescription>选择分析方式</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">实时分析</Badge>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    立即开始分析，保持页面打开以查看实时进度和结果。
+                    分析过程中会显示各个Agent的实时输出。
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setShowOptions(false)
+                      handleReanalyze()
+                    }}
+                    className="w-full"
+                  >
+                    实时分析
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">异步分析</Badge>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    任务启动后无需等待，您可以关闭页面。
+                    分析完成后，报告将保存到历史记录中，您可以在历史页面查看。
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowOptions(false)
+                      handleStartAsyncAnalysis()
+                    }}
+                    className="w-full"
+                  >
+                    异步分析
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>股票信息</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">公司名称</p>
+                  <p className="font-semibold">{analysis?.company_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">当前价格</p>
+                  <p className="font-semibold">${analysis?.current_price?.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">涨跌幅</p>
+                  <p className={`font-semibold ${(analysis?.change_percent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {(analysis?.change_percent || 0) >= 0 ? '+' : ''}{(analysis?.change_percent || 0).toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  if (taskInfo) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold mb-6">{ticker} 分析任务已启动</h1>
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>任务信息</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">任务ID</p>
+                    <p className="font-mono text-sm">{taskInfo.task_id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">状态</p>
+                    <Badge variant={taskInfo.status === 'completed' ? 'default' : 'secondary'}>
+                      {taskInfo.status === 'pending' ? '待处理' :
+                       taskInfo.status === 'analyzing' ? '分析中' :
+                       taskInfo.status === 'completed' ? '已完成' : '失败'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">进度</p>
+                    <p className="font-semibold">{taskInfo.progress}%</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">消息</p>
+                    <p className="text-sm">{taskInfo.progress_message}</p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t dark:border-gray-700">
+                  <Button
+                    onClick={() => router.push('/history')}
+                    className="w-full"
+                  >
+                    跳转到历史页面
+                  </Button>
+                </div>
+
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-4">
+                  任务将在后台继续执行，您可以随时在历史页面查看状态和结果。
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
       <div className="max-w-7xl mx-auto">
@@ -266,12 +440,12 @@ export default function AnalysisPage() {
                 取消
               </Button>
             )}
-            <Button onClick={handleReanalyze} disabled={analyzing}>
+            <Button onClick={() => setShowOptions(true)} disabled={analyzing}>
               {analyzing ? '分析中...' : '重新分析'}
             </Button>
           </div>
         </div>
-        
+
         {/* Progress Bar */}
         {analyzing && (
           <Card className="mb-6 border-2 border-blue-500">
@@ -287,7 +461,7 @@ export default function AnalysisPage() {
                   <span className="text-gray-500">{Math.round(progress)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                  <div 
+                  <div
                     className="bg-blue-500 h-full rounded-full transition-all duration-300 ease-out"
                     style={{ width: `${progress}%` }}
                   />
@@ -347,7 +521,7 @@ export default function AnalysisPage() {
             { key: 'technical', title: 'Technical Agent 报告', emoji: '📈', content: analysis?.technical_report },
             { key: 'custom_skill', title: 'Custom Skill Agent 报告', emoji: '🔧', content: analysis?.custom_skill_report },
           ].map((report) => (
-            <Card key={report.key} className={report.content ? '' : analyzing ? 'opacity-70' : 'hidden'}>
+            <Card key={report.key} className={report.content ? '' : analyzing ? 'opacity-70' : ''}>
               <CardHeader
                 className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors py-2 px-3"
                 onClick={() => toggleCollapse(report.key as keyof typeof collapsed)}
@@ -376,8 +550,14 @@ export default function AnalysisPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 text-gray-400 py-3">
-                      <span className="animate-spin">⏳</span>
-                      <span>正在分析中，请稍候...</span>
+                      {analyzing ? (
+                        <>
+                          <span className="animate-spin">⏳</span>
+                          <span>正在分析中，请稍候...</span>
+                        </>
+                      ) : (
+                        <span>暂无分析内容，请点击‘重新分析’按钮开始分析</span>
+                      )}
                     </div>
                   )}
                 </CardContent>

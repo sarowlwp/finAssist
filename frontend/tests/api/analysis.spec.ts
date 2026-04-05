@@ -7,11 +7,22 @@ test.describe('Analysis API', () => {
     mockLLMAPI(page);
   });
 
-  test('should analyze ticker and get task status', async ({ request }) => {
-    const analyzeResponse = await request.post('/api/analysis/AAPL');
+  test('should start async analysis and get task status', async ({ request }) => {
+    // 启动异步分析任务
+    const analyzeResponse = await request.post('/api/analysis/ticker/start', {
+      data: { ticker: 'AAPL' }
+    });
     expect(analyzeResponse.ok()).toBeTruthy();
     const result = await analyzeResponse.json();
+    expect(result.success).toBeTruthy();
     expect(result.task_id).toBeDefined();
-    expect(result.status).toBeDefined();
+    expect(result.ticker).toBe('AAPL');
+
+    // 获取任务列表
+    const tasksResponse = await request.get('/api/analysis/tasks');
+    expect(tasksResponse.ok()).toBeTruthy();
+    const tasks = await tasksResponse.json();
+    expect(Array.isArray(tasks)).toBeTruthy();
+    expect(tasks.length).toBeGreaterThan(0);
   });
 });
