@@ -847,3 +847,47 @@ async def delete_analysis_report(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"删除分析报告失败: {str(e)}"
         )
+
+
+@router.delete("/analysis/tasks/{task_id}")
+async def delete_analysis_task(
+    task_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    删除分析任务
+
+    Args:
+        task_id: 任务 ID
+        db: 数据库会话
+
+    Returns:
+        删除结果
+    """
+    try:
+        task = db.query(AnalysisTask).filter(AnalysisTask.task_id == task_id).first()
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"未找到任务: {task_id}"
+            )
+
+        # 检查任务状态
+        if task.status == "analyzing":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="正在分析中的任务不能删除"
+            )
+
+        # 删除任务
+        db.delete(task)
+        db.commit()
+
+        return {"success": True, "message": "任务已删除"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除任务失败: {str(e)}"
+        )
