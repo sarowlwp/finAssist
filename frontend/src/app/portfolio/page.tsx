@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { portfolioApi } from '@/lib/api'
+import FundamentalsModal from '@/components/portfolio/FundamentalsModal'
+import { Eye } from 'lucide-react'
 
 interface PortfolioItem {
   ticker: string
@@ -33,6 +35,13 @@ export default function PortfolioPage() {
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [saving, setSaving] = useState(false)
+  const [selectedTicker, setSelectedTicker] = useState<string>('')
+  const [showFundamentalsModal, setShowFundamentalsModal] = useState(false)
+
+  const handleShowFundamentals = (ticker: string) => {
+    setSelectedTicker(ticker)
+    setShowFundamentalsModal(true)
+  }
 
   useEffect(() => {
     fetchPortfolio()
@@ -250,6 +259,15 @@ export default function PortfolioPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                onClick={() => handleShowFundamentals(item.ticker)}
+                                className="flex items-center gap-1"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                查看数据
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => handleEdit(item)}
                               >
                                 编辑
@@ -272,6 +290,13 @@ export default function PortfolioPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Fundamentals Modal */}
+        <FundamentalsModal
+          ticker={selectedTicker}
+          isOpen={showFundamentalsModal}
+          onClose={() => setShowFundamentalsModal(false)}
+        />
       </div>
     </div>
   )
