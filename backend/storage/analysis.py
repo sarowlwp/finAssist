@@ -9,6 +9,7 @@ from datetime import datetime
 from services.analysis_report_repository import AnalysisReportRepository
 from models import AnalysisReport as DBReport
 from models import AgentReport as DBAgentReport
+from utils.json_to_markdown import json_to_markdown
 
 
 class AnalysisReport(BaseModel):
@@ -51,16 +52,23 @@ class AnalysisStore:
             }
 
             for agent in repo.get_agent_reports(db_report.report_id):
+                content = agent.agent_content
+                # 转换内容为 Markdown
+                markdown_content = json_to_markdown(content)
+
                 if agent.agent_name == "news_agent":
-                    agent_reports["news_report"] = agent.agent_content
+                    agent_reports["news_report"] = markdown_content
                 elif agent.agent_name == "sec_agent":
-                    agent_reports["sec_report"] = agent.agent_content
+                    agent_reports["sec_report"] = markdown_content
                 elif agent.agent_name == "fundamentals_agent":
-                    agent_reports["fundamentals_report"] = agent.agent_content
+                    agent_reports["fundamentals_report"] = markdown_content
                 elif agent.agent_name == "technical_agent":
-                    agent_reports["technical_report"] = agent.agent_content
+                    agent_reports["technical_report"] = markdown_content
                 elif agent.agent_name == "custom_skill_agent":
-                    agent_reports["custom_skill_report"] = agent.agent_content
+                    agent_reports["custom_skill_report"] = markdown_content
+
+            # 转换 fusion summary
+            fusion_summary = json_to_markdown(db_report.fusion_summary or "")
 
             reports.append(AnalysisReport(
                 report_id=db_report.report_id,
@@ -70,7 +78,7 @@ class AnalysisStore:
                 status=db_report.status,
                 current_price=float(db_report.current_price),
                 change_percent=float(db_report.change_percent),
-                fusion_summary=db_report.fusion_summary or "",
+                fusion_summary=fusion_summary,
                 **agent_reports
             ))
 
@@ -96,16 +104,23 @@ class AnalysisStore:
             }
 
             for agent in repo.get_agent_reports(db_report.report_id):
+                content = agent.agent_content
+                # 转换内容为 Markdown
+                markdown_content = json_to_markdown(content)
+
                 if agent.agent_name == "news_agent":
-                    agent_reports["news_report"] = agent.agent_content
+                    agent_reports["news_report"] = markdown_content
                 elif agent.agent_name == "sec_agent":
-                    agent_reports["sec_report"] = agent.agent_content
+                    agent_reports["sec_report"] = markdown_content
                 elif agent.agent_name == "fundamentals_agent":
-                    agent_reports["fundamentals_report"] = agent.agent_content
+                    agent_reports["fundamentals_report"] = markdown_content
                 elif agent.agent_name == "technical_agent":
-                    agent_reports["technical_report"] = agent.agent_content
+                    agent_reports["technical_report"] = markdown_content
                 elif agent.agent_name == "custom_skill_agent":
-                    agent_reports["custom_skill_report"] = agent.agent_content
+                    agent_reports["custom_skill_report"] = markdown_content
+
+            # 转换 fusion summary
+            fusion_summary = json_to_markdown(db_report.fusion_summary or "")
 
             return AnalysisReport(
                 report_id=db_report.report_id,
@@ -115,7 +130,7 @@ class AnalysisStore:
                 status=db_report.status,
                 current_price=float(db_report.current_price),
                 change_percent=float(db_report.change_percent),
-                fusion_summary=db_report.fusion_summary or "",
+                fusion_summary=fusion_summary,
                 **agent_reports
             )
 
