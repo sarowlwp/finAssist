@@ -205,6 +205,13 @@ export const analysisApi = {
     return apiRequest(`/analysis/tasks?${queryParams.toString()}`);
   },
 
+  // 删除分析任务
+  deleteTask: async (taskId: string) => {
+    return apiRequest(`/analysis/tasks/${taskId}`, {
+      method: 'DELETE',
+    });
+  },
+
   // 获取单个分析任务状态
   getAnalysisTask: async (taskId: string) => {
     return apiRequest(`/analysis/tasks/${taskId}`);
