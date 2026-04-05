@@ -6,7 +6,12 @@ from config import config
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{config.DATA_DIR / 'finance_assistant.db'}"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    pool_size=20,
+    max_overflow=30,
+    pool_recycle=1800,
+    pool_pre_ping=True
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
