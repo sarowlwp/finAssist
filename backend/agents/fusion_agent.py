@@ -21,19 +21,23 @@ class FusionAgent(BaseAgent):
             system_prompt=system_prompt,
             model_config=model_config,
             prompt_key="fusion",
+            format_params={
+                "investment_style": "{investment_style}",
+                "ticker_note": "{ticker_note}"
+            },
         )
     
     async def run(self, input_data: Dict[str, Any]) -> AgentMessage:
         """
         执行 Fusion Agent 的主要逻辑
-        
+
         Args:
             input_data: 包含以下字段的字典
                 - ticker: 股票代码
                 - agent_outputs: 各专项 Agent 的输出结果（字典）
                 - investment_style: 用户投资风格
                 - ticker_note: ticker 专属笔记
-        
+
         Returns:
             AgentMessage: 包含融合分析报告的 AgentMessage
         """
@@ -41,12 +45,15 @@ class FusionAgent(BaseAgent):
         agent_outputs = input_data.get('agent_outputs', {})
         investment_style = input_data.get('investment_style', '均衡型')
         ticker_note = input_data.get('ticker_note', '')
-        
-        # 构建完整的 prompt
-        full_prompt = self.system_prompt.format(
-            investment_style=investment_style,
-            ticker_note=ticker_note
-        )
+
+        # 更新格式化参数
+        self.update_format_params({
+            "investment_style": investment_style,
+            "ticker_note": ticker_note
+        })
+
+        # 现在 self.system_prompt 已经是格式化后的，不需要再调用 format 方法
+        full_prompt = self.system_prompt
         
         # 构建各 Agent 输出摘要
         agent_outputs_summary = self._build_agent_outputs_summary(agent_outputs)

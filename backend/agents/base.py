@@ -120,7 +120,7 @@ class BaseAgent:
     """Agent 基类，提供所有 Agent 的通用功能"""
     
     def __init__(self, name: str, system_prompt: str, model_config: dict = None,
-                 prompt_key: str = None):
+                 prompt_key: str = None, format_params: dict = None):
         """
         初始化 Agent。
 
@@ -131,16 +131,20 @@ class BaseAgent:
             prompt_key: 用于从文件系统加载 prompt 的标识名（如 "news"、"sec"）。
                         如果提供，会优先从 prompts/{prompt_key}.md 加载 prompt，
                         并自动安装 md frontmatter 中声明的 skills。
+            format_params: 用于格式化 prompt 的参数字典（可选）。
+                          如果提供，会在加载 prompt 后使用这些参数进行格式化。
         """
         self.name = name
         self.model_config = model_config or {}
         self.skills: list[dict] = []
         self.prompt_key = prompt_key
+        self._unformatted_system_prompt = None  # 保存未格式化的 prompt
+        self._format_params = format_params or {}  # 保存格式化参数
 
         # 优先从文件系统加载 prompt
         loaded = load_prompt_from_file(prompt_key) if prompt_key else None
         if loaded:
-            self.system_prompt = loaded[0]
+            self._unformatted_system_prompt = loaded[0]
             # 自动安装 frontmatter 中声明的 skills
             for skill_name in loaded[1]:
                 self.install_skill({
@@ -150,7 +154,23 @@ class BaseAgent:
                     "source": "prompt_file",
                 })
         else:
-            self.system_prompt = system_prompt    
+            self._unformatted_system_prompt = system_prompt
+
+        # 格式化 prompt
+        self._format_system_prompt()    
+    def _format_system_prompt(self):
+        """格式化系统提示"""
+        try:
+            self.system_prompt = self._unformatted_system_prompt.format(**self._format_params)
+        except Exception as e:
+            logger.warning(f"格式化系统 prompt 失败: {str(e)}")
+            self.system_prompt = self._unformatted_system_prompt
+
+    def update_format_params(self, new_params: dict):
+        """更新格式化参数并重新格式化"""
+        self._format_params.update(new_params)
+        self._format_system_prompt()
+
     async def run(self, input_data: dict) -> AgentMessage:
         """执行 Agent 的主要逻辑，子类必须实现"""
         raise NotImplementedError
