@@ -39,11 +39,15 @@ class FinnhubService:
                     if sub in domain:
                         return company_website
                 # 尝试构造IR网址
-                for sub in ir_subdomains:
-                    base_domain = re.sub(r'^www\.', '', domain)
-                    return f"https://{sub}{base_domain}"
+                base_domain = re.sub(r'^www\.', '', domain)
+                # 常见的IR路径模式
+                ir_paths = ['/investor-relations', '/investors', '/ir']
+                for path in ir_paths:
+                    # 尝试构造IR网站
+                    ir_website_candidate = company_website.rstrip('/') + path
+                    return ir_website_candidate
 
-        # 默认使用SEC EDGAR或常见IR网站
+        # 默认使用SEC EDGAR
         return f"https://www.sec.gov/edgar/browse/?CIK={ticker}"
 
     def _generate_earnings_url(self, ticker: str) -> str:
@@ -56,7 +60,24 @@ class FinnhubService:
         Returns:
             财报页面URL
         """
-        # SEC EDGAR 财报查询
+        try:
+            # 尝试从 Finnhub API 获取最新的 SEC 文件
+            filings = self.client.filings(symbol=ticker, _from=(datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d"),
+                                       to=datetime.now().strftime("%Y-%m-%d"))
+
+            # 筛选 10-K（年度报告）和 10-Q（季度报告）
+            financial_filings = [f for f in filings if f.get('form') in ['10-K', '10-Q']]
+
+            if financial_filings:
+                # 按提交日期排序，最新的在前面
+                sorted_filings = sorted(financial_filings, key=lambda x: x.get('filedDate'), reverse=True)
+                latest_filing = sorted_filings[0]
+                return latest_filing.get('filingUrl', f"https://www.sec.gov/edgar/browse/?CIK={ticker}")
+
+        except Exception as e:
+            print(f"Error fetching earnings filings: {e}")
+
+        # 默认使用SEC EDGAR搜索页面
         return f"https://www.sec.gov/edgar/browse/?CIK={ticker}"
     
     def _handle_api_error(self, func_name: str, error: Exception) -> Dict[str, Any]:
