@@ -37,7 +37,7 @@ async function apiRequest(url: string, options: RequestInit = {}) {
 }
 
 // 公司概况类型定义
-interface CompanyProfile {
+export interface CompanyProfile {
   ticker: string;
   name: string;
   exchange: string;
@@ -52,7 +52,7 @@ interface CompanyProfile {
 }
 
 // 财务指标类型定义
-interface Financials {
+export interface Financials {
   revenue: number;
   revenueGrowth: number;
   operatingIncome: number;
@@ -72,7 +72,7 @@ interface Financials {
 }
 
 // 技术指标类型定义
-interface TechnicalIndicators {
+export interface TechnicalIndicators {
   sma50: number;
   sma200: number;
   ema12: number;
@@ -91,7 +91,7 @@ interface TechnicalIndicators {
 }
 
 // 基本面数据类型定义
-interface FundamentalsData {
+export interface FundamentalsData {
   ticker: string;
   companyProfile: CompanyProfile;
   financials: Financials;
