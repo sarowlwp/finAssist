@@ -95,17 +95,18 @@ def _get_available_agents() -> List[AgentInfo]:
     agents.append(AgentInfo(name="fusion", description="Fusion Agent - 融合多个 Agent 的分析结果", builtin=True))
     return agents
 
-def get_orchestrator(model_config: Dict[str, Any] = None) -> AnalysisOrchestrator:
+def get_orchestrator(model_config: Dict[str, Any] = None, agent_model_configs: Dict[str, Dict[str, Any]] = None) -> AnalysisOrchestrator:
     """
     获取或创建 AnalysisOrchestrator 实例
-    
+
     Args:
-        model_config: 模型配置
-    
+        model_config: 通用模型配置（默认配置）
+        agent_model_configs: Agent 级模型配置
+
     Returns:
         AnalysisOrchestrator 实例
     """
-    return AnalysisOrchestrator(model_config=model_config)
+    return AnalysisOrchestrator(model_config=model_config, agent_model_configs=agent_model_configs)
 
 
 @router.get("/agents", response_model=List[AgentInfo])
@@ -160,15 +161,18 @@ async def chat_with_agent(
         
         # 获取模型配置
         llm_cfg = request.llm_config
+        agent_model_configs = {}
         if not llm_cfg:
             logger.info("从设置中加载 LLM 配置")
             settings = settings_store.load()
             llm_cfg = settings.llm_config
+            agent_model_configs = settings.agent_model_configs or {}
         logger.info(f"使用的 LLM 配置: {llm_cfg}")
-        
+        logger.info(f"使用的 Agent 模型配置: {agent_model_configs}")
+
         # 创建 orchestrator 并聊天
         logger.info("创建 Orchestrator...")
-        orchestrator = get_orchestrator(llm_cfg)
+        orchestrator = get_orchestrator(llm_cfg, agent_model_configs)
         
         logger.info("调用 chat_with_agent...")
         response = await orchestrator.chat_with_agent(

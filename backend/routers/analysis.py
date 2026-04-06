@@ -64,18 +64,19 @@ class StartAnalysisResponse(BaseModel):
     message: str = Field(..., description="消息")
 
 
-def get_orchestrator(model_config: Dict[str, Any] = None) -> AnalysisOrchestrator:
+def get_orchestrator(model_config: Dict[str, Any] = None, agent_model_configs: Dict[str, Dict[str, Any]] = None) -> AnalysisOrchestrator:
     """
     获取或创建 AnalysisOrchestrator 实例
 
     Args:
-        model_config: 模型配置
+        model_config: 通用模型配置（默认配置）
+        agent_model_configs: Agent 级模型配置
 
     Returns:
         AnalysisOrchestrator 实例
     """
     # 这里可以缓存 orchestrator 实例
-    return AnalysisOrchestrator(model_config=model_config)
+    return AnalysisOrchestrator(model_config=model_config, agent_model_configs=agent_model_configs)
 
 
 def create_analysis_task(db: Session, ticker: str, company_name: str) -> AnalysisTask:
@@ -130,6 +131,7 @@ async def run_ticker_analysis(
     ticker: str,
     user_settings: Dict[str, Any],
     model_config: Dict[str, Any],
+    agent_model_configs: Dict[str, Dict[str, Any]],
     db: Session
 ):
     """
@@ -140,6 +142,7 @@ async def run_ticker_analysis(
         ticker: 股票代码
         user_settings: 用户设置
         model_config: 模型配置
+        agent_model_configs: Agent 级模型配置
         db: 数据库会话
     """
     try:
@@ -147,7 +150,7 @@ async def run_ticker_analysis(
         update_task_status(db, task_id, status="analyzing", progress=10, progress_message="开始分析...")
 
         # 创建 orchestrator
-        orchestrator = get_orchestrator(model_config)
+        orchestrator = get_orchestrator(model_config, agent_model_configs)
 
         # 进度回调
         def progress_callback(stage: str, message: str, progress: float, agent_name: str = None, agent_content: str = None):
@@ -294,6 +297,7 @@ async def start_ticker_analysis(
             "agent_skills": settings.agent_skills or {},
         }
         llm_cfg = settings.llm_config
+        agent_model_configs = settings.agent_model_configs or {}
 
         # 添加后台任务
         background_tasks.add_task(
@@ -302,6 +306,7 @@ async def start_ticker_analysis(
             request.ticker,
             user_settings,
             llm_cfg,
+            agent_model_configs,
             db
         )
 
@@ -600,9 +605,10 @@ async def analyze_ticker_stream(
                 "agent_skills": settings.agent_skills or {},
             }
             llm_cfg = settings.llm_config
-            
+            agent_model_configs = settings.agent_model_configs or {}
+
             # 创建 orchestrator
-            orchestrator = get_orchestrator(llm_cfg)
+            orchestrator = get_orchestrator(llm_cfg, agent_model_configs)
             
             import logging
             logger = logging.getLogger("analysis_stream")

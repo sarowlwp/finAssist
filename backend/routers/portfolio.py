@@ -16,15 +16,15 @@ router = APIRouter()
 class PortfolioCreate(BaseModel):
     """创建持仓请求模型"""
     ticker: str = Field(..., description="股票代码")
-    quantity: int = Field(..., gt=0, description="持仓数量")
-    cost_price: float = Field(..., gt=0, description="成本价")
+    quantity: int = Field(..., ge=0, description="持仓数量（0表示关注但未持有）")
+    cost_price: float = Field(..., ge=0, description="成本价")
     note: Optional[str] = Field(None, description="备注")
 
 
 class PortfolioUpdate(BaseModel):
     """更新持仓请求模型"""
-    quantity: Optional[int] = Field(None, gt=0, description="持仓数量")
-    cost_price: Optional[float] = Field(None, gt=0, description="成本价")
+    quantity: Optional[int] = Field(None, ge=0, description="持仓数量（0表示关注但未持有）")
+    cost_price: Optional[float] = Field(None, ge=0, description="成本价")
     note: Optional[str] = Field(None, description="备注")
 
 

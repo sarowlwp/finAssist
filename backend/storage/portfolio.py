@@ -16,8 +16,8 @@ from models import PortfolioHolding
 class PortfolioItem(BaseModel):
     """持仓项模型"""
     ticker: str = Field(..., description="股票代码")
-    quantity: int = Field(..., gt=0, description="持仓数量")
-    cost_price: float = Field(..., gt=0, description="成本价")
+    quantity: int = Field(..., ge=0, description="持仓数量（0表示关注但未持有）")
+    cost_price: float = Field(..., ge=0, description="成本价")
     note: Optional[str] = Field(None, description="备注")
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat(), description="创建时间")
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat(), description="更新时间")

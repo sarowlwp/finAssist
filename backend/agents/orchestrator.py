@@ -16,23 +16,25 @@ from config import config
 
 class AnalysisOrchestrator:
     """分析编排器，负责协调多个 Agent 完成完整的投资分析流程"""
-    
-    def __init__(self, model_config: dict = None):
+
+    def __init__(self, model_config: dict = None, agent_model_configs: dict = None):
         """
         初始化编排器
-        
+
         Args:
-            model_config: 模型配置字典
+            model_config: 通用模型配置字典（作为默认配置）
+            agent_model_configs: Agent 级模型配置字典，key 为 agent 名称，value 为模型配置
         """
         self.model_config = model_config or {}
-        
-        # 初始化各 Agent
-        self.supervisor = SupervisorAgent(model_config)
-        self.fusion_agent = FusionAgent(model_config)
-        
+        self.agent_model_configs = agent_model_configs or {}
+
+        # 初始化各 Agent，优先使用 Agent 级配置，无配置时使用通用配置
+        self.supervisor = SupervisorAgent(self.agent_model_configs.get('supervisor', self.model_config))
+        self.fusion_agent = FusionAgent(self.agent_model_configs.get('fusion', self.model_config))
+
         # 通过注册表创建 5 个分析 Agent
         self.analysis_agents = {
-            key: create_agent(key, model_config)
+            key: create_agent(key, self.agent_model_configs.get(key, self.model_config))
             for key in AGENT_REGISTRY
         }
         

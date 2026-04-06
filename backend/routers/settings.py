@@ -76,7 +76,7 @@ async def update_investment_style(
     """
     try:
         # 验证投资风格
-        valid_styles = ["conservative", "growth", "value", "balanced"]
+        valid_styles = ["conservative", "growth", "value", "balanced", "aggressive"]
         if update.investment_style not in valid_styles:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
