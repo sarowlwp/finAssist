@@ -237,11 +237,7 @@ export default function HistoryPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() =>
-                            document
-                              .getElementById(`report-${task.report_id}`)
-                              ?.scrollIntoView({ behavior: 'smooth' })
-                          }
+                          onClick={() => router.push(`/report/${task.report_id}`)}
                         >
                           查看报告
                         </Button>
@@ -293,11 +289,7 @@ export default function HistoryPage() {
                     <Card
                       key={report.report_id}
                       className="cursor-pointer hover:border-blue-400 transition-colors"
-                      onClick={() =>
-                        document
-                          .getElementById(`report-${report.report_id}`)
-                          ?.scrollIntoView({ behavior: 'smooth' })
-                      }
+                      onClick={() => router.push(`/report/${report.report_id}`)}
                     >
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between mb-1">
