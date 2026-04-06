@@ -52,6 +52,8 @@ export default function HistoryPage() {
   const [expandedReports, setExpandedReports] = useState<Set<string>>(new Set())
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [showTasks, setShowTasks] = useState(true)
+  const [showAllTasks, setShowAllTasks] = useState(false)
+  const [showAllReports, setShowAllReports] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -157,6 +159,22 @@ export default function HistoryPage() {
     ? tasks
     : []
 
+  // 任务排序和显示控制
+  const sortedTasks = [...filteredTasks].sort((a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+  const displayedTasks = showAllTasks || searchTicker
+    ? sortedTasks
+    : sortedTasks.slice(0, 3)
+
+  // 报告排序和显示控制
+  const sortedReports = [...filteredReports].sort((a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+  const displayedReports = showAllReports || searchTicker
+    ? sortedReports
+    : sortedReports.slice(0, 3)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
       <div className="max-w-7xl mx-auto">
@@ -193,7 +211,7 @@ export default function HistoryPage() {
             </CardHeader>
             <CardContent className="pt-0 px-4 pb-4">
               <div className="space-y-3">
-                {filteredTasks.map((task) => (
+                {displayedTasks.map((task) => (
                   <div
                     key={task.task_id}
                     className="border rounded-lg p-3 dark:border-gray-700"
@@ -267,6 +285,17 @@ export default function HistoryPage() {
                   </div>
                 ))}
               </div>
+              {!searchTicker && sortedTasks.length > 3 && (
+                <div className="mt-4 text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllTasks(!showAllTasks)}
+                  >
+                    {showAllTasks ? '收起' : `查看更多 (${sortedTasks.length - 3} 条)`}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -280,12 +309,12 @@ export default function HistoryPage() {
             </CardHeader>
             <CardContent className="pt-0 px-4 pb-4">
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                {filteredReports.length === 0 ? (
+                {displayedReports.length === 0 ? (
                   <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                     {searchTicker ? '未找到匹配的报告' : '暂无分析报告'}
                   </div>
                 ) : (
-                  filteredReports.map((report) => (
+                  displayedReports.map((report) => (
                     <Card
                       key={report.report_id}
                       className="cursor-pointer hover:border-blue-400 transition-colors"
@@ -334,6 +363,17 @@ export default function HistoryPage() {
                   ))
                 )}
               </div>
+              {!searchTicker && sortedReports.length > 3 && (
+                <div className="mt-4 text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllReports(!showAllReports)}
+                  >
+                    {showAllReports ? '收起' : `查看更多 (${sortedReports.length - 3} 条)`}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
