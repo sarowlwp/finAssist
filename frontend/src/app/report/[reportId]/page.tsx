@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabList, TabTrigger, TabContent } from '@/components/ui/tabs'
 import { analysisApi } from '@/lib/api'
 import MarkdownRenderer from '@/components/MarkdownRenderer'
 import { format } from 'date-fns'
@@ -136,33 +137,115 @@ export default function ReportPage() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {[
-            { title: 'News Agent', content: report.news_report, emoji: '📰' },
-            { title: 'SEC Agent', content: report.sec_report, emoji: '📋' },
-            { title: 'Fundamentals Agent', content: report.fundamentals_report, emoji: '📊' },
-            { title: 'Technical Agent', content: report.technical_report, emoji: '📈' },
-            { title: 'Custom Skill Agent', content: report.custom_skill_report, emoji: '🔧' },
-          ].map(({ title, content, emoji }) => (
-            <Card key={title} className="h-full">
-              <CardHeader className="py-3 px-4">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <span>{emoji}</span>
-                  {title}
+        <Tabs defaultValue="news">
+          <TabList>
+            <TabTrigger value="news">📰 News Agent</TabTrigger>
+            <TabTrigger value="sec">📋 SEC Agent</TabTrigger>
+            <TabTrigger value="fundamentals">📊 Fundamentals Agent</TabTrigger>
+            <TabTrigger value="technical">📈 Technical Agent</TabTrigger>
+            <TabTrigger value="custom">🔧 Custom Skill Agent</TabTrigger>
+          </TabList>
+
+          <TabContent value="news">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span>📰</span>
+                  News Agent
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 px-4 pb-4">
-                {content ? (
-                  <div className="prose prose-slate dark:prose-invert max-w-none text-sm">
-                    <MarkdownRenderer content={content} />
+              <CardContent>
+                {report.news_report ? (
+                  <div className="prose prose-slate dark:prose-invert max-w-none">
+                    <MarkdownRenderer content={report.news_report} />
                   </div>
                 ) : (
                   <div className="text-sm text-gray-500">暂无内容</div>
                 )}
               </CardContent>
             </Card>
-          ))}
-        </div>
+          </TabContent>
+
+          <TabContent value="sec">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span>📋</span>
+                  SEC Agent
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {report.sec_report ? (
+                  <div className="prose prose-slate dark:prose-invert max-w-none">
+                    <MarkdownRenderer content={report.sec_report} />
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">暂无内容</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabContent>
+
+          <TabContent value="fundamentals">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span>📊</span>
+                  Fundamentals Agent
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {report.fundamentals_report ? (
+                  <div className="prose prose-slate dark:prose-invert max-w-none">
+                    <MarkdownRenderer content={report.fundamentals_report} />
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">暂无内容</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabContent>
+
+          <TabContent value="technical">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span>📈</span>
+                  Technical Agent
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {report.technical_report ? (
+                  <div className="prose prose-slate dark:prose-invert max-w-none">
+                    <MarkdownRenderer content={report.technical_report} />
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">暂无内容</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabContent>
+
+          <TabContent value="custom">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span>🔧</span>
+                  Custom Skill Agent
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {report.custom_skill_report ? (
+                  <div className="prose prose-slate dark:prose-invert max-w-none">
+                    <MarkdownRenderer content={report.custom_skill_report} />
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">暂无内容</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabContent>
+        </Tabs>
       </div>
     </div>
   )
