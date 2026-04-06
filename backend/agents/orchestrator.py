@@ -27,16 +27,23 @@ class AnalysisOrchestrator:
         """
         self.model_config = model_config or {}
         self.agent_model_configs = agent_model_configs or {}
+        logger.info(f"初始化 Orchestrator 时收到的 agent_model_configs: {self.agent_model_configs}")
 
         # 初始化各 Agent，优先使用 Agent 级配置，无配置时使用通用配置
-        self.supervisor = SupervisorAgent(self.agent_model_configs.get('supervisor', self.model_config))
-        self.fusion_agent = FusionAgent(self.agent_model_configs.get('fusion', self.model_config))
+        supervisor_config = self.agent_model_configs.get('supervisor', self.model_config)
+        logger.info(f"Supervisor Agent 配置: {supervisor_config}")
+        self.supervisor = SupervisorAgent(supervisor_config)
+
+        fusion_config = self.agent_model_configs.get('fusion', self.model_config)
+        logger.info(f"Fusion Agent 配置: {fusion_config}")
+        self.fusion_agent = FusionAgent(fusion_config)
 
         # 通过注册表创建 5 个分析 Agent
-        self.analysis_agents = {
-            key: create_agent(key, self.agent_model_configs.get(key, self.model_config))
-            for key in AGENT_REGISTRY
-        }
+        self.analysis_agents = {}
+        for key in AGENT_REGISTRY:
+            agent_config = self.agent_model_configs.get(key, self.model_config)
+            logger.info(f"{key} Agent 配置: {agent_config}")
+            self.analysis_agents[key] = create_agent(key, agent_config)
         
         # 初始化服务
         self.finnhub_service = FinnhubService(config.FINNHUB_API_KEY) if config.FINNHUB_API_KEY else None

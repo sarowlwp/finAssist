@@ -108,6 +108,11 @@ class SettingsStore:
         settings = self.load()
         return settings.agent_model_configs.get(agent_name)
     
+    def get_agent_model_config(self, agent_name: str) -> Optional[Dict[str, Any]]:
+        """获取指定 Agent 的模型配置"""
+        settings = self.load()
+        return settings.agent_model_configs.get(agent_name)
+
     def update_agent_model_config(self, agent_name: str, config: Dict[str, Any]) -> UserSettings:
         """更新指定 Agent 的模型配置"""
         settings = self.load()

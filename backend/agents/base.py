@@ -136,6 +136,7 @@ class BaseAgent:
         """
         self.name = name
         self.model_config = model_config or {}
+        logger.info(f"[{name}] 初始化，收到的 model_config: {self.model_config}")
         self.skills: list[dict] = []
         self.prompt_key = prompt_key
         self._unformatted_system_prompt = None  # 保存未格式化的 prompt
