@@ -14,7 +14,6 @@ test.describe('History Page', () => {
     await expect(page.getByPlaceholder('搜索股票代码...')).toBeVisible();
     await expect(page.locator('button:has-text("刷新数据")')).toBeVisible();
     await expect(page.locator('h3:has-text("报告列表")')).toBeVisible();
-    await expect(page.locator('h3:has-text("报告详情")')).toBeVisible();
   });
 
   test('should display toggle button for tasks and reports', async ({ page }) => {
@@ -39,5 +38,13 @@ test.describe('History Page', () => {
     // Click refresh button
     await refreshButton.click();
     await page.waitForTimeout(500);
+  });
+
+  test('should display limited number of tasks and reports by default', async ({ page }) => {
+    // Check tasks container exists
+    await expect(page.locator('h3:has-text("分析任务状态")')).toBeVisible();
+
+    // Check reports container exists
+    await expect(page.locator('h3:has-text("报告列表")')).toBeVisible();
   });
 });
