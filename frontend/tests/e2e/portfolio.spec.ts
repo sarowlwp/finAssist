@@ -20,20 +20,28 @@ test.describe('Portfolio Management', () => {
     // Click add button
     await page.getByRole('button', { name: '+ 添加持仓' }).click();
 
-    // Wait for modal to open
-    await expect(page.getByRole('heading', { name: '添加持仓' })).toBeVisible();
+    // Wait for modal to open by checking for the title
+    await expect(page.locator('text=添加持仓').first()).toBeVisible();
 
-    // Fill form
-    await page.getByPlaceholder('例如: AAPL').fill('MSFT');
-    await page.getByPlaceholder('例如: 100 (0表示关注)').fill('50');
-    await page.getByPlaceholder('例如: 150.00').fill('300');
-    await page.getByPlaceholder('添加备注信息...').fill('Microsoft Corporation');
+    // Fill form - use CSS selectors that are more reliable in modal
+    await page.locator('input[placeholder="例如: AAPL"]').fill('MSFT');
+    await page.locator('input[placeholder="例如: 100 (0表示关注)"]').fill('50');
+    await page.locator('input[placeholder="例如: 150.00"]').fill('300');
 
-    // Click add button
-    await page.getByRole('button', { name: '添加' }).click();
+    // Click add button using more direct selector - find all "添加" buttons and pick the one not on the main page
+    const addButtons = page.locator('button', { hasText: '添加' });
+    const count = await addButtons.count();
+    for (let i = 0; i < count; i++) {
+      const btn = addButtons.nth(i);
+      const text = await btn.textContent();
+      if (text === '添加') {
+        await btn.click();
+        break;
+      }
+    }
 
-    // Verify modal is closed and item is added
-    await expect(page.getByRole('heading', { name: '添加持仓' })).not.toBeVisible();
+    // Verify modal is closed
+    await page.waitForSelector('text=添加持仓', { state: 'hidden' });
   });
 
   test('should edit an existing portfolio item', async ({ page }) => {
@@ -66,24 +74,48 @@ test.describe('Portfolio Management', () => {
   });
 
   test('should delete a portfolio item', async ({ page }) => {
-    // Wait for mock data to load
-    await expect(page.getByText('AAPL')).toBeVisible();
+    // First add a test item so we can delete it
+    await page.getByRole('button', { name: '+ 添加持仓' }).click();
+    await page.waitForSelector('input[placeholder="例如: AAPL"]');
+    await page.locator('input[placeholder="例如: AAPL"]').fill('TEST');
+    await page.locator('input[placeholder="例如: 100 (0表示关注)"]').fill('10');
+    await page.locator('input[placeholder="例如: 150.00"]').fill('100');
+    await page.locator('button:has-text("添加")').filter({ hasNotText: '+ 添加' }).click();
+    await page.waitForSelector('[role="dialog"]', { state: 'hidden' });
+
+    // Wait for item to be added
+    await expect(page.getByText('TEST')).toBeVisible();
 
     // Click delete button
-    const aaplRow = page.locator('tr').filter({ hasText: 'AAPL' });
+    const testRow = page.locator('tr').filter({ hasText: 'TEST' });
     page.on('dialog', dialog => dialog.accept());
-    await aaplRow.getByRole('button', { name: '删除' }).click();
+    await testRow.getByRole('button', { name: '删除' }).click();
 
     // Verify item is removed from table
-    await expect(page.getByText('AAPL')).not.toBeVisible();
+    await expect(page.getByText('TEST')).not.toBeVisible();
   });
 
   test('should display zero quantity items with special style', async ({ page }) => {
-    // Check if there are any zero quantity items (mock data should have TSLA with 0 quantity)
-    await expect(page.getByText('TSLA').locator('..').filter({ hasText: '关注' })).toBeVisible();
+    // First add a zero quantity item to test with
+    await page.getByRole('button', { name: '+ 添加持仓' }).click();
+
+    // Wait for modal to open and fill form
+    await page.waitForSelector('input[placeholder="例如: AAPL"]');
+    await page.locator('input[placeholder="例如: AAPL"]').fill('ZERO');
+    await page.locator('input[placeholder="例如: 100 (0表示关注)"]').fill('0');
+    await page.locator('input[placeholder="例如: 150.00"]').fill('50');
+    await page.locator('button:has-text("添加")').filter({ hasNotText: '+ 添加' }).click();
+    await page.waitForSelector('[role="dialog"]', { state: 'hidden' });
+
+    // Wait for item to be added and check for "关注" badge
+    await expect(page.getByText('ZERO')).toBeVisible();
 
     // Check the "关注" badge style
-    const zeroQuantityBadges = page.getByText('关注');
-    await expect(zeroQuantityBadges).toBeVisible();
+    const zeroRow = page.locator('tr').filter({ hasText: 'ZERO' });
+    await expect(zeroRow.getByText('关注')).toBeVisible();
+
+    // Clean up
+    page.on('dialog', dialog => dialog.accept());
+    await zeroRow.getByRole('button', { name: '删除' }).click();
   });
 });

@@ -38,17 +38,27 @@ test.describe('完整功能测试套件', () => {
 
     test('显示持仓管理页面元素', async ({ page }) => {
       await expect(page.getByRole('heading', { name: '持仓管理' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: '添加持仓' })).toBeVisible();
       await expect(page.getByRole('heading', { name: '持仓列表' })).toBeVisible();
-      await expect(page.getByPlaceholder('例如: AAPL')).toBeVisible();
+      await expect(page.getByRole('button', { name: '+ 添加持仓' })).toBeVisible();
     });
 
     test('验证表单操作', async ({ page }) => {
-      await page.getByPlaceholder('例如: AAPL').fill('MSFT');
-      await page.getByPlaceholder('例如: 100').fill('50');
-      await page.getByPlaceholder('例如: 150.00').fill('300');
-      await page.getByRole('button', { name: '添加' }).click();
-      await expect(page.getByPlaceholder('例如: AAPL')).toHaveValue('');
+      // Click add button
+      await page.getByRole('button', { name: '+ 添加持仓' }).click();
+
+      // Wait for modal to open and form to be visible
+      await page.waitForSelector('input[placeholder="例如: AAPL"]');
+
+      // Fill form with more reliable selectors
+      await page.locator('input[placeholder="例如: AAPL"]').fill('MSFT');
+      await page.locator('input[placeholder="例如: 100 (0表示关注)"]').fill('50');
+      await page.locator('input[placeholder="例如: 150.00"]').fill('300');
+
+      // Click add button - ensure we don't get the button on the main page
+      await page.locator('button:has-text("添加")').filter({ hasNotText: '+ 添加' }).click();
+
+      // Wait for modal to close
+      await page.waitForSelector('[role="dialog"]', { state: 'hidden' });
     });
 
     test('验证搜索功能', async ({ page }) => {
@@ -142,8 +152,9 @@ test.describe('完整功能测试套件', () => {
     test('显示设置页面主要元素', async ({ page }) => {
       await expect(page.getByRole('heading', { name: '设置' })).toBeVisible();
       await expect(page.getByRole('heading', { name: '投资风格' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: '模型配置' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'API Key 配置' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: '通用模型配置' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Agent 模型配置' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'API Key 配置状态' })).toBeVisible();
       await expect(page.getByRole('button', { name: '保存投资风格' })).toBeVisible();
       await expect(page.getByRole('button', { name: '保存模型配置' })).toBeVisible();
     });
