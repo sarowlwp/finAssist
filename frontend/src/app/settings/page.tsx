@@ -27,11 +27,22 @@ interface Settings {
   }
 }
 
+// Agent 模型配置数据类型
+interface AgentModelConfig {
+  provider: string
+  model: string
+}
+
+interface AgentConfigState {
+  [agentName: string]: AgentModelConfig
+}
+
 const INVESTMENT_STYLE_OPTIONS: { value: string; label: string }[] = [
   { value: 'conservative', label: '保守型' },
   { value: 'growth', label: '成长型' },
   { value: 'value', label: '价值型' },
   { value: 'balanced', label: '均衡型' },
+  { value: 'aggressive', label: '激进型' },
 ]
 
 const PROVIDER_OPTIONS: { value: string; label: string }[] = [
@@ -42,11 +53,22 @@ const PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: 'dashscope', label: 'DashScope' },
 ]
 
+// Agent 列表
+const AGENTS_LIST = ['supervisor', 'fusion', 'news', 'sec', 'fundamentals', 'technical', 'custom_skill']
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+
+  // Agent 配置状态
+  const [agentModelConfigs, setAgentModelConfigs] = useState<AgentConfigState>({})
+  const [editingAgent, setEditingAgent] = useState<string | null>(null)
+  const [agentConfigForm, setAgentConfigForm] = useState<AgentModelConfig>({
+    provider: 'openrouter',
+    model: 'anthropic/claude-3.5-sonnet'
+  })
 
   useEffect(() => {
     fetchSettings()
@@ -64,6 +86,19 @@ export default function SettingsPage() {
         ...settingsData,
         api_keys: apiKeysData
       })
+
+      // 获取 Agent 配置
+      const configs: AgentConfigState = {}
+      for (const agent of AGENTS_LIST) {
+        try {
+          const config = await settingsApi.getAgentModelConfig(agent)
+          configs[agent] = config
+        } catch (error) {
+          console.error(`获取 ${agent} 配置失败:`, error)
+        }
+      }
+      setAgentModelConfigs(configs)
+
     } catch (err) {
       console.error('Failed to fetch settings:', err)
       // Mock data
@@ -111,6 +146,34 @@ export default function SettingsPage() {
       console.error('Failed to save model config:', err)
     } finally {
       setSaving(false)
+    }
+  }
+
+  // 编辑 Agent 配置
+  const handleEditAgentConfig = (agentName: string) => {
+    setEditingAgent(agentName)
+    const config = agentModelConfigs[agentName] || {
+      provider: 'openrouter',
+      model: 'anthropic/claude-3.5-sonnet'
+    }
+    setAgentConfigForm(config)
+  }
+
+  // 保存 Agent 配置
+  const handleSaveAgentConfig = async () => {
+    if (editingAgent) {
+      try {
+        const updatedSettings = await settingsApi.updateAgentModelConfig(editingAgent, agentConfigForm)
+        setAgentModelConfigs(prev => ({
+          ...prev,
+          [editingAgent]: agentConfigForm
+        }))
+        setEditingAgent(null)
+        showMessage('success', `${editingAgent} Agent 配置已保存`)
+      } catch (error) {
+        console.error(`保存 ${editingAgent} 配置失败:`, error)
+        showMessage('error', `保存 ${editingAgent} 配置失败`)
+      }
     }
   }
 
@@ -166,6 +229,7 @@ export default function SettingsPage() {
                     <li><strong>成长型</strong>：追求高增长潜力，接受较高风险</li>
                     <li><strong>价值型</strong>：寻找被低估的优质资产</li>
                     <li><strong>均衡型</strong>：平衡风险和收益，分散投资</li>
+                    <li><strong>激进型</strong>：追求高回报，接受高风险</li>
                   </ul>
                 </div>
                 <Button onClick={handleSaveInvestmentStyle} disabled={saving} size="sm">
@@ -178,8 +242,8 @@ export default function SettingsPage() {
           {/* Model Configuration */}
           <Card>
             <CardHeader className="py-3 px-4">
-              <CardTitle className="text-lg">模型配置</CardTitle>
-              <CardDescription className="text-sm">配置 AI 模型参数</CardDescription>
+              <CardTitle className="text-lg">通用模型配置</CardTitle>
+              <CardDescription className="text-sm">配置默认 AI 模型参数</CardDescription>
             </CardHeader>
             <CardContent className="pt-0 px-4 pb-4">
               <div className="space-y-3">
@@ -246,6 +310,101 @@ export default function SettingsPage() {
                 <Button onClick={handleSaveModelConfig} disabled={saving} size="sm">
                   {saving ? '保存中...' : '保存模型配置'}
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Agent 模型配置 */}
+          <Card>
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-lg">Agent 模型配置</CardTitle>
+              <CardDescription className="text-sm">为每个 Agent 单独配置模型提供商和模型</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0 px-4 pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {AGENTS_LIST.map(agent => (
+                  <div
+                    key={agent}
+                    className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium capitalize">{agent} Agent</h4>
+                      <Button
+                        size="sm"
+                        variant={editingAgent === agent ? "default" : "outline"}
+                        onClick={() => {
+                          if (editingAgent === agent) {
+                            handleSaveAgentConfig()
+                          } else {
+                            handleEditAgentConfig(agent)
+                          }
+                        }}
+                      >
+                        {editingAgent === agent ? '保存' : '编辑'}
+                      </Button>
+                    </div>
+
+                    {editingAgent === agent ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium mb-1">Provider</label>
+                          <Select
+                            options={PROVIDER_OPTIONS}
+                            value={agentConfigForm.provider}
+                            onChange={(e) =>
+                              setAgentConfigForm(prev => ({ ...prev, provider: e.target.value }))
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium mb-1">Model 名称</label>
+                          <Input
+                            type="text"
+                            value={agentConfigForm.model}
+                            onChange={(e) =>
+                              setAgentConfigForm(prev => ({ ...prev, model: e.target.value }))
+                            }
+                            placeholder="模型名称"
+                            className="text-sm h-9"
+                          />
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            size="sm"
+                            onClick={handleSaveAgentConfig}
+                            className="flex-1"
+                          >
+                            保存
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingAgent(null)}
+                          >
+                            取消
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 dark:text-gray-400">提供商:</span>
+                          <span className="font-medium">
+                            {agentModelConfigs[agent]?.provider || '默认'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500 dark:text-gray-400">模型:</span>
+                          <span className="font-medium text-xs truncate max-w-[150px]" title={agentModelConfigs[agent]?.model}>
+                            {agentModelConfigs[agent]?.model || '默认'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

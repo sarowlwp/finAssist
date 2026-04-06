@@ -215,29 +215,31 @@ async def run_portfolio_analysis(
     analysis_id: str,
     tickers: List[str],
     user_settings: Dict[str, Any],
-    model_config: Dict[str, Any]
+    model_config: Dict[str, Any],
+    agent_model_configs: Dict[str, Dict[str, Any]]
 ):
     """
     后台执行投资组合分析
-    
+
     Args:
         analysis_id: 分析 ID
         tickers: 股票代码列表
         user_settings: 用户设置
         model_config: 模型配置
+        agent_model_configs: Agent 级模型配置
     """
     try:
         # 更新状态为运行中
         analysis_status[analysis_id]["status"] = "running"
         analysis_status[analysis_id]["progress"] = 10.0
-        
+
         # 创建 orchestrator
-        orchestrator = get_orchestrator(model_config)
-        
+        orchestrator = get_orchestrator(model_config, agent_model_configs)
+
         # 执行分析
         analysis_status[analysis_id]["progress"] = 50.0
         results = await orchestrator.analyze_portfolio(tickers, user_settings)
-        
+
         # 更新状态为完成
         analysis_status[analysis_id]["status"] = "completed"
         analysis_status[analysis_id]["progress"] = 100.0
@@ -245,7 +247,7 @@ async def run_portfolio_analysis(
             "reports": results,
             "count": len(results)
         }
-        
+
     except Exception as e:
         # 更新状态为失败
         analysis_status[analysis_id]["status"] = "failed"
@@ -509,7 +511,8 @@ async def analyze_portfolio(
             "agent_skills": settings.agent_skills or {},
         }
         llm_cfg = settings.llm_config
-        
+        agent_model_configs = settings.agent_model_configs or {}
+
         # 初始化状态
         analysis_status[analysis_id] = {
             "analysis_id": analysis_id,
@@ -519,14 +522,15 @@ async def analyze_portfolio(
             "error": None,
             "tickers": request.tickers
         }
-        
+
         # 添加后台任务
         background_tasks.add_task(
             run_portfolio_analysis,
             analysis_id,
             request.tickers,
             user_settings,
-            llm_cfg
+            llm_cfg,
+            agent_model_configs
         )
         
         return AnalysisStatus(**analysis_status[analysis_id])

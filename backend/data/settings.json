@@ -1,5 +1,5 @@
 {
-  "investment_style": "growth",
+  "investment_style": "value",
   "llm_config": {
     "provider": "openrouter",
     "model": "qwen/qwen3.6-plus:free",
@@ -48,5 +48,5 @@
     }
   },
   "custom_agents": {},
-  "updated_at": "2026-04-04T22:53:45.820933"
+  "updated_at": "2026-04-06T15:54:16.764719"
 }
