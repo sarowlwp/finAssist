@@ -53,22 +53,20 @@ class AnalysisStore:
 
             for agent in repo.get_agent_reports(db_report.report_id):
                 content = agent.agent_content
-                # 转换内容为 Markdown
-                markdown_content = json_to_markdown(content)
-
+                # 内容在保存时已经转换过，这里不再重复转换
                 if agent.agent_name == "news_agent":
-                    agent_reports["news_report"] = markdown_content
+                    agent_reports["news_report"] = content
                 elif agent.agent_name == "sec_agent":
-                    agent_reports["sec_report"] = markdown_content
+                    agent_reports["sec_report"] = content
                 elif agent.agent_name == "fundamentals_agent":
-                    agent_reports["fundamentals_report"] = markdown_content
+                    agent_reports["fundamentals_report"] = content
                 elif agent.agent_name == "technical_agent":
-                    agent_reports["technical_report"] = markdown_content
+                    agent_reports["technical_report"] = content
                 elif agent.agent_name == "custom_skill_agent":
-                    agent_reports["custom_skill_report"] = markdown_content
+                    agent_reports["custom_skill_report"] = content
 
-            # 转换 fusion summary
-            fusion_summary = json_to_markdown(db_report.fusion_summary or "")
+            # fusion summary 在保存时已经转换过，这里不再重复转换
+            fusion_summary = db_report.fusion_summary or ""
 
             reports.append(AnalysisReport(
                 report_id=db_report.report_id,
@@ -105,22 +103,20 @@ class AnalysisStore:
 
             for agent in repo.get_agent_reports(db_report.report_id):
                 content = agent.agent_content
-                # 转换内容为 Markdown
-                markdown_content = json_to_markdown(content)
-
+                # 内容在保存时已经转换过，这里不再重复转换
                 if agent.agent_name == "news_agent":
-                    agent_reports["news_report"] = markdown_content
+                    agent_reports["news_report"] = content
                 elif agent.agent_name == "sec_agent":
-                    agent_reports["sec_report"] = markdown_content
+                    agent_reports["sec_report"] = content
                 elif agent.agent_name == "fundamentals_agent":
-                    agent_reports["fundamentals_report"] = markdown_content
+                    agent_reports["fundamentals_report"] = content
                 elif agent.agent_name == "technical_agent":
-                    agent_reports["technical_report"] = markdown_content
+                    agent_reports["technical_report"] = content
                 elif agent.agent_name == "custom_skill_agent":
-                    agent_reports["custom_skill_report"] = markdown_content
+                    agent_reports["custom_skill_report"] = content
 
-            # 转换 fusion summary
-            fusion_summary = json_to_markdown(db_report.fusion_summary or "")
+            # fusion summary 在保存时已经转换过，这里不再重复转换
+            fusion_summary = db_report.fusion_summary or ""
 
             return AnalysisReport(
                 report_id=db_report.report_id,
