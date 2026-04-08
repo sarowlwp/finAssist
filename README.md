@@ -9,7 +9,7 @@
 - **多 Agent 系统**: AgentScope（Supervisor + 5 专项 Agent + Fusion Agent）
 - **数据验证**: Pydantic v2
 - **金融数据**: Finnhub API
-- **存储**: 本地 JSON 文件
+- **存储**: SQLite 数据库 + 本地 JSON 文件
 
 ### 前端
 - **框架**: Next.js 14 + React
@@ -42,6 +42,11 @@ finAssist/
 │   ├── services/               # 业务服务
 │   │   ├── finnhub.py          # Finnhub 数据服务
 │   │   └── model_adapter.py    # 多模型适配层
+│   ├── database.py            # 数据库连接和配置
+│   ├── models.py              # SQLAlchemy 数据模型
+│   ├── init_db.py             # 数据库初始化脚本
+│   ├── example_data.sql       # 示例数据 SQL 文件
+│   ├── db_init_README.md      # 数据库使用说明
 │   └── storage/                # 数据存储
 │       ├── settings.py         # 用户设置存储
 │       └── portfolio.py        # 持仓数据存储
@@ -94,6 +99,10 @@ pip install -r requirements.txt
 # 配置环境变量（可选，也可在设置页面配置）
 export FINNHUB_API_KEY="your_finnhub_api_key"
 
+# 数据库初始化（可选，首次启动会自动执行）
+# 该命令会创建数据库表结构并导入示例数据
+python init_db.py
+
 # 启动后端服务（默认端口 8001）
 python main.py
 ```
@@ -114,6 +123,50 @@ npm run dev
 ```
 
 前端应用将在 `http://localhost:3000` 启动
+
+## 🗄️ 数据库初始化
+
+系统使用 SQLite 数据库存储数据，数据库会在首次启动时自动初始化。
+
+### 数据库表结构
+
+| 表名 | 说明 |
+|------|------|
+| `portfolio_holdings` | 用户持仓数据 |
+| `analysis_reports` | 分析报告主表 |
+| `agent_reports` | Agent 详细报告表 |
+| `analysis_tasks` | 分析任务状态表 |
+| `finnhub_cache` | Finnhub API 数据缓存 |
+
+### 数据库初始化脚本
+
+在 `backend/` 目录下提供了 `init_db.py` 脚本，用于手动管理数据库：
+
+```bash
+cd backend
+source venv/bin/activate
+
+# 完整初始化（创建表 + 导入示例数据）
+python init_db.py
+
+# 重置数据库（删除所有数据并重新初始化）
+python init_db.py reset
+
+# 仅导入示例持仓数据
+python init_db.py sample
+```
+
+### 示例数据
+
+初始化后会自动导入以下示例数据：
+- **6条持仓数据**：AAPL、NVDA、TSLA、INTC、MSFT、AMZN
+- **3条分析报告**：包含完整的 Agent 分析内容
+- **9条 Agent 报告**：每个分析报告包含新闻、财务、技术等维度
+- **1条待处理任务**：演示任务队列功能
+
+### 数据库操作详细说明
+
+更多数据库操作说明请查看 `backend/db_init_README.md`
 
 ## ⚙️ 配置说明
 
@@ -235,7 +288,7 @@ npm run dev
 1. **端口冲突**：后端默认使用 8001 端口，如被占用请修改 `backend/main.py` 中的 `port` 参数
 2. **API Key 安全**：请勿将 API Key 提交到代码仓库
 3. **Finnhub 限制**：免费版 API 有调用频率限制（60 次/分钟）
-4. **数据存储**：所有数据存储在本地 JSON 文件中，路径为 `backend/data/`
+4. **数据存储**：所有数据存储在 SQLite 数据库中，路径为 `backend/data/finance_assistant.db`
 
 ## 🛠️ 开发指南
 
