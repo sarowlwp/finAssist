@@ -44,9 +44,11 @@ finAssist/
 │   │   └── model_adapter.py    # 多模型适配层
 │   ├── database.py            # 数据库连接和配置
 │   ├── models.py              # SQLAlchemy 数据模型
-│   ├── init_db.py             # 数据库初始化脚本
-│   ├── example_data.sql       # 示例数据 SQL 文件
-│   ├── db_init_README.md      # 数据库使用说明
+│   └── scripts/               # 脚本文件
+│       └── db/                # 数据库相关脚本
+│           ├── init_db.py     # 数据库初始化脚本
+│           ├── example_data.sql # 示例数据 SQL 文件
+│           └── db_init_README.md # 数据库使用说明
 │   └── storage/                # 数据存储
 │       ├── settings.py         # 用户设置存储
 │       └── portfolio.py        # 持仓数据存储
@@ -101,7 +103,7 @@ export FINNHUB_API_KEY="your_finnhub_api_key"
 
 # 数据库初始化（可选，首次启动会自动执行）
 # 该命令会创建数据库表结构并导入示例数据
-python init_db.py
+python scripts/db/init_db.py
 
 # 启动后端服务（默认端口 8001）
 python main.py
@@ -140,20 +142,20 @@ npm run dev
 
 ### 数据库初始化脚本
 
-在 `backend/` 目录下提供了 `init_db.py` 脚本，用于手动管理数据库：
+在 `backend/scripts/db/` 目录下提供了 `init_db.py` 脚本，用于手动管理数据库：
 
 ```bash
 cd backend
 source venv/bin/activate
 
 # 完整初始化（创建表 + 导入示例数据）
-python init_db.py
+python scripts/db/init_db.py
 
 # 重置数据库（删除所有数据并重新初始化）
-python init_db.py reset
+python scripts/db/init_db.py reset
 
 # 仅导入示例持仓数据
-python init_db.py sample
+python scripts/db/init_db.py sample
 ```
 
 ### 示例数据
@@ -166,7 +168,7 @@ python init_db.py sample
 
 ### 数据库操作详细说明
 
-更多数据库操作说明请查看 `backend/db_init_README.md`
+更多数据库操作说明请查看 `backend/scripts/db/db_init_README.md`
 
 ## ⚙️ 配置说明
 

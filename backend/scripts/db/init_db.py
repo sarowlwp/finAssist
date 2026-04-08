@@ -13,7 +13,8 @@ import sqlite3
 from pathlib import Path
 
 # 添加项目根目录到路径
-sys.path.append(str(Path(__file__).parent))
+backend_dir = Path(__file__).parent.parent.parent  # scripts/db/ -> scripts/ -> backend/
+sys.path.append(str(backend_dir))
 
 from database import Base, engine
 from models import (
