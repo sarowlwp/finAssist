@@ -20,6 +20,9 @@ from models import AnalysisTask
 
 router = APIRouter()
 
+# 模块级分析状态字典（用于组合分析和旧接口）
+analysis_status: Dict[str, Dict[str, Any]] = {}
+
 
 # Pydantic 模型
 class TickerAnalysisRequest(BaseModel):
@@ -434,9 +437,7 @@ async def analyze_ticker(
         }
         llm_cfg = settings.llm_config
 
-        # 初始化状态（内存中）
-        from typing import Dict, Any
-        analysis_status: Dict[str, Dict[str, Any]] = {}
+        # 初始化状态（使用模块级 analysis_status）
         analysis_status[analysis_id] = {
             "analysis_id": analysis_id,
             "status": "pending",
@@ -696,6 +697,8 @@ async def analyze_ticker_stream(
                 yield f"data: {json.dumps({'type': 'error', 'message': error}, ensure_ascii=False)}\n\n"
             elif result:
                 try:
+                    from utils.json_to_markdown import json_to_markdown
+
                     # 保存分析报告
                     try:
                         # 从result中提取各个agent的输出
@@ -728,7 +731,6 @@ async def analyze_ticker_stream(
                         yield f"data: {json.dumps({'type': 'agent_result', 'agent_name': agent_name, 'agent_content': agent_content}, ensure_ascii=False)}\n\n"
                     
                     # 再发送 fusion 输出 - 转换为 Markdown
-                    from utils.json_to_markdown import json_to_markdown
                     fusion_output = result.get('fusion_output', '')
                     fusion_markdown = json_to_markdown(fusion_output)
                     yield f"data: {json.dumps({'type': 'fusion_result', 'fusion_output': fusion_markdown}, ensure_ascii=False)}\n\n"

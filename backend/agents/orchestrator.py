@@ -4,6 +4,7 @@ Analysis Orchestrator - 分析编排器
 """
 
 import asyncio
+import logging
 from typing import Dict, Any, List, Callable, Optional
 from .supervisor import SupervisorAgent
 from .analysis_agent import create_agent, AGENT_REGISTRY
@@ -12,6 +13,8 @@ from services.finnhub_service import FinnhubService
 from storage.settings import SettingsStore
 from storage.portfolio import PortfolioStore
 from config import config
+
+logger = logging.getLogger(__name__)
 
 
 class AnalysisOrchestrator:
@@ -119,17 +122,37 @@ class AnalysisOrchestrator:
         news_data = []
         fundamentals_data = {}
         technical_data = {}
+        company_name = ticker
+        quote_data = {}
         if self.finnhub_service:
+            # 获取公司概况和报价
+            try:
+                profile = self.finnhub_service.get_company_profile(ticker)
+                if isinstance(profile, dict) and profile.get("success"):
+                    company_name = profile.get("company_name", ticker) or ticker
+            except Exception as e:
+                logger.warning(f"获取公司概况失败: {e}")
+
+            try:
+                quote = self.finnhub_service.get_quote(ticker)
+                if isinstance(quote, dict) and quote.get("success"):
+                    quote_data = {
+                        "current_price": quote.get("current_price", 0),
+                        "change_percent": quote.get("percent_change", 0),
+                    }
+            except Exception as e:
+                logger.warning(f"获取报价失败: {e}")
+
             raw_news = self.finnhub_service.get_company_news(ticker)
             if isinstance(raw_news, dict) and raw_news.get("success"):
                 news_data = raw_news.get("news", [])
             elif isinstance(raw_news, list):
                 news_data = raw_news
-            
+
             raw_fundamentals = self.finnhub_service.get_financials(ticker)
             if isinstance(raw_fundamentals, dict) and raw_fundamentals.get("success"):
                 fundamentals_data = {"metric": raw_fundamentals}
-            
+
             raw_technical = self.finnhub_service.get_technical_indicators(ticker)
             if isinstance(raw_technical, dict) and raw_technical.get("success"):
                 technical_data = raw_technical
@@ -212,6 +235,8 @@ class AnalysisOrchestrator:
             'fusion_output': fusion_output.content,
             'metadata': {
                 'timestamp': self._get_current_timestamp(),
+                'company_name': company_name,
+                'quote': quote_data,
                 'data_sources': {
                     'news': len(news_data),
                     'sec': len(sec_data) if sec_data else 0,

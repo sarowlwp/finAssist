@@ -3,9 +3,12 @@ Finnhub 数据服务模块
 """
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
+import logging
 import finnhub
 from finnhub import Client as FinnhubClient
 import math
+
+logger = logging.getLogger(__name__)
 
 
 class FinnhubService:
@@ -40,12 +43,8 @@ class FinnhubService:
                         return company_website
                 # 尝试构造IR网址
                 base_domain = re.sub(r'^www\.', '', domain)
-                # 常见的IR路径模式
-                ir_paths = ['/investor-relations', '/investors', '/ir']
-                for path in ir_paths:
-                    # 尝试构造IR网站
-                    ir_website_candidate = company_website.rstrip('/') + path
-                    return ir_website_candidate
+                # 使用最常见的 IR 路径
+                return company_website.rstrip('/') + '/investor-relations'
 
         # 默认使用SEC EDGAR
         return f"https://www.sec.gov/edgar/browse/?CIK={ticker}"
@@ -109,10 +108,21 @@ class FinnhubService:
 
         try:
             quote = self.client.quote(ticker)
+            current_price = quote.get("c") or 0
+            # Finnhub 对无效 ticker 返回全零，视为无效数据
+            if current_price == 0:
+                logger.warning(f"get_quote: ticker={ticker} returned price=0, treating as invalid")
+                return {
+                    "success": False,
+                    "ticker": ticker,
+                    "error": f"无法获取 {ticker} 的报价，请确认股票代码正确",
+                    "current_price": 0,
+                    "timestamp": datetime.now().isoformat()
+                }
             result = {
                 "success": True,
                 "ticker": ticker,
-                "current_price": quote.get("c"),
+                "current_price": current_price,
                 "change": quote.get("d"),
                 "percent_change": quote.get("dp"),
                 "high_price": quote.get("h"),
@@ -126,9 +136,11 @@ class FinnhubService:
                 from services.finnhub_cache_service import FinnhubCacheService
                 cache_service = FinnhubCacheService(self.db)
                 cache_service.set_cache("quote", ticker, result)
+                logger.info(f"get_quote: cached result for ticker={ticker}")
 
             return result
         except Exception as e:
+            logger.error(f"get_quote error for ticker={ticker}: {e}")
             return self._handle_api_error("get_quote", e)
     
     def get_company_profile(self, ticker: str, use_cache: bool = True) -> Dict[str, Any]:
@@ -151,6 +163,15 @@ class FinnhubService:
 
         try:
             profile = self.client.company_profile2(symbol=ticker)
+
+            # 空 profile 表示 ticker 无效
+            if not profile or not profile.get("name"):
+                logger.warning(f"get_company_profile: ticker={ticker} returned empty profile")
+                return {
+                    "success": False,
+                    "ticker": ticker,
+                    "error": f"无法获取 {ticker} 的公司信息，请确认股票代码正确"
+                }
 
             # 生成投资者关系网站和财报链接
             website = profile.get("weburl", "")
@@ -178,9 +199,11 @@ class FinnhubService:
                 from services.finnhub_cache_service import FinnhubCacheService
                 cache_service = FinnhubCacheService(self.db)
                 cache_service.set_cache("company_profile", ticker, result)
+                logger.info(f"get_company_profile: cached result for ticker={ticker}")
 
             return result
         except Exception as e:
+            logger.error(f"get_company_profile error for ticker={ticker}: {e}")
             return self._handle_api_error("get_company_profile", e)
     
     def get_financials(self, ticker: str, use_cache: bool = True) -> Dict[str, Any]:
@@ -384,22 +407,21 @@ class FinnhubService:
                 return cached
 
         try:
-            # 获取最近50天的蜡烛图数据
+            # 获取最近60天的蜡烛图数据
             end_date = int(datetime.now().timestamp())
             start_date = int((datetime.now() - timedelta(days=60)).timestamp())
 
-            candles = self.client.stock_candles(
-                ticker,
-                "D",
-                start_date,
-                end_date
-            )
+            candles = self.client.stock_candles(ticker, "D", start_date, end_date)
 
             if candles.get("s") != "ok" or not candles.get("c"):
+                logger.warning(f"get_technical_indicators: ticker={ticker} candle status={candles.get('s')}")
                 return {
                     "success": False,
-                    "error": "Unable to fetch candle data",
-                    "ticker": ticker
+                    "ticker": ticker,
+                    "error": "无法获取K线数据（当前套餐可能不支持）",
+                    "rsi": None,
+                    "macd": None,
+                    "bollinger_bands": None
                 }
 
             close_prices = candles["c"]
@@ -424,7 +446,20 @@ class FinnhubService:
                 from services.finnhub_cache_service import FinnhubCacheService
                 cache_service = FinnhubCacheService(self.db)
                 cache_service.set_cache("technical_indicators", ticker, result)
+                logger.info(f"get_technical_indicators: cached result for ticker={ticker}")
 
             return result
         except Exception as e:
+            err_str = str(e)
+            if "403" in err_str:
+                logger.warning(f"get_technical_indicators: 403 for ticker={ticker}, API plan limitation")
+                return {
+                    "success": False,
+                    "ticker": ticker,
+                    "error": "技术指标数据需要付费套餐（Finnhub stock_candles API）",
+                    "rsi": None,
+                    "macd": None,
+                    "bollinger_bands": None
+                }
+            logger.error(f"get_technical_indicators error for ticker={ticker}: {e}")
             return self._handle_api_error("get_technical_indicators", e)

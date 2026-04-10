@@ -40,15 +40,17 @@ async def startup_event():
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     # 初始化数据库
-    from database import Base, engine
+    from database import Base, engine, SessionLocal
     from services.finnhub_cache_service import FinnhubCacheService
-    from database import get_db
 
     Base.metadata.create_all(bind=engine)
 
-    db = next(get_db())
-    cache_service = FinnhubCacheService(db)
-    cache_service.delete_expired_cache()
+    db = SessionLocal()
+    try:
+        cache_service = FinnhubCacheService(db)
+        cache_service.delete_expired_cache()
+    finally:
+        db.close()
 
     # 从持久化存储中加载用户自定义 Agent
     from storage.settings import SettingsStore

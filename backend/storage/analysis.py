@@ -83,8 +83,53 @@ class AnalysisStore:
         return reports
 
     def load_by_ticker(self, ticker: str) -> List[AnalysisReport]:
-        all_reports = self.load_all()
-        return [report for report in all_reports if report.ticker.upper() == ticker.upper()]
+        from dependencies import get_db
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            repo = AnalysisReportRepository(db)
+            db_reports = repo.get_reports_by_ticker(ticker)
+
+            reports = []
+            for db_report in db_reports:
+                agent_reports = {
+                    "news_report": "",
+                    "sec_report": "",
+                    "fundamentals_report": "",
+                    "technical_report": "",
+                    "custom_skill_report": ""
+                }
+
+                for agent in repo.get_agent_reports(db_report.report_id):
+                    content = agent.agent_content
+                    if agent.agent_name == "news_agent":
+                        agent_reports["news_report"] = content
+                    elif agent.agent_name == "sec_agent":
+                        agent_reports["sec_report"] = content
+                    elif agent.agent_name == "fundamentals_agent":
+                        agent_reports["fundamentals_report"] = content
+                    elif agent.agent_name == "technical_agent":
+                        agent_reports["technical_report"] = content
+                    elif agent.agent_name == "custom_skill_agent":
+                        agent_reports["custom_skill_report"] = content
+
+                fusion_summary = db_report.fusion_summary or ""
+
+                reports.append(AnalysisReport(
+                    report_id=db_report.report_id,
+                    ticker=db_report.ticker,
+                    company_name=db_report.company_name,
+                    created_at=db_report.created_at.isoformat(),
+                    status=db_report.status,
+                    current_price=float(db_report.current_price),
+                    change_percent=float(db_report.change_percent),
+                    fusion_summary=fusion_summary,
+                    **agent_reports
+                ))
+
+            return reports
+        finally:
+            db.close()
 
     def load_by_id(self, report_id: str) -> Optional[AnalysisReport]:
         from dependencies import get_db

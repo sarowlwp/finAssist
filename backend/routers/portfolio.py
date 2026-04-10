@@ -143,6 +143,7 @@ async def get_all_portfolio(
         for holding in holdings:
             # 获取当前价格
             current_price = 0.0
+            quote = {}
             if finnhub_service:
                 quote = finnhub_service.get_quote(holding.ticker)
                 if quote.get("success"):
@@ -155,8 +156,8 @@ async def get_all_portfolio(
 
             # 数据状态信息
             data_status = {
-                "last_updated": quote.get("timestamp") if (finnhub_service and quote.get("success")) else None,
-                "is_stale": False  # 默认数据不过期，可以根据实际情况判断
+                "last_updated": quote.get("timestamp") if quote.get("success") else None,
+                "is_stale": False
             }
 
             result.append({

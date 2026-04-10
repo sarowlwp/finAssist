@@ -49,11 +49,10 @@ def get_settings_store() -> SettingsStore:
     return _settings_store
 
 def get_finnhub_service(db: Session = Depends(get_db)) -> Optional[FinnhubService]:
-    """获取 FinnhubService 单例"""
-    global _finnhub_service
-    if _finnhub_service is None and config.FINNHUB_API_KEY:
-        _finnhub_service = FinnhubService(config.FINNHUB_API_KEY, db)
-    return _finnhub_service
+    """获取 FinnhubService 实例（每次请求使用当前请求的 db session）"""
+    if config.FINNHUB_API_KEY:
+        return FinnhubService(config.FINNHUB_API_KEY, db)
+    return None
 
 def get_model_adapter() -> ModelAdapter:
     """获取 ModelAdapter 单例"""

@@ -195,15 +195,14 @@ class BaseAgent:
         
         try:
             loop = asyncio.get_event_loop()
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                logger.info(f"[{self.name}] 开始调用模型...")
-                response = await loop.run_in_executor(
-                    executor,
-                    self._call_model,
-                    self.get_full_prompt(),
-                    message
-                )
-                logger.info(f"[{self.name}] 模型调用完成")
+            logger.info(f"[{self.name}] 开始调用模型...")
+            response = await loop.run_in_executor(
+                _model_executor,
+                self._call_model,
+                self.get_full_prompt(),
+                message
+            )
+            logger.info(f"[{self.name}] 模型调用完成")
             
             return AgentMessage(
                 role=self.name,

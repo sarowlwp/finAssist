@@ -4,9 +4,14 @@ uvicorn
 finnhub-python
 openai
 httpx
+httpx-sse
 pydantic
+pydantic-settings
 python-dotenv
 pytest
 pytest-asyncio
 pytest-cov
 sqlalchemy>=2.0.0
+aiosqlite
+sse-starlette
+starlette

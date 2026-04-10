@@ -147,7 +147,7 @@ class PortfolioStore:
                 new_quantity = existing.quantity + item.quantity
                 total_cost = (existing.quantity * existing.cost_price +
                              item.quantity * Decimal(str(item.cost_price)))
-                new_cost_price = total_cost / new_quantity
+                new_cost_price = total_cost / new_quantity if new_quantity > 0 else Decimal('0')
 
                 existing.quantity = new_quantity
                 existing.cost_price = new_cost_price
@@ -173,8 +173,23 @@ class PortfolioStore:
 
         except IntegrityError:
             self.db.rollback()
-            # 重新尝试，处理并发
-            return self.add_item(item)
+            # 重新尝试一次，处理并发写入
+            existing = self.db.query(PortfolioHolding).filter(
+                PortfolioHolding.ticker.ilike(item.ticker)
+            ).first()
+            if existing:
+                new_quantity = existing.quantity + item.quantity
+                total_cost = (existing.quantity * existing.cost_price +
+                             item.quantity * Decimal(str(item.cost_price)))
+                existing.quantity = new_quantity
+                existing.cost_price = total_cost / new_quantity if new_quantity > 0 else Decimal('0')
+                if item.note:
+                    existing.note = item.note
+                existing.updated_at = datetime.now()
+                self.db.commit()
+                self.db.refresh(existing)
+                return self._holding_to_item(existing)
+            raise
         except Exception:
             self.db.rollback()
             raise

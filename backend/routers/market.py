@@ -197,13 +197,8 @@ async def get_technical(
             )
         
         technical = finnhub_service.get_technical_indicators(ticker)
-        
-        if not technical.get("success"):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=technical.get("error", "获取技术指标失败")
-            )
-        
+
+        # 技术指标可能因套餐限制而不可用，直接返回（前端自行处理 success=False）
         return technical
     except HTTPException:
         raise

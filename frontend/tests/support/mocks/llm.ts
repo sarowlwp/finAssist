@@ -3,7 +3,10 @@ import { Page } from '@playwright/test';
 export function mockLLMAPI(page: Page) {
   page.route('**/api/agents/*/chat', async (route) => {
     const url = route.request().url();
-    const agentName = url.split('/').pop();
+    const parts = url.split('/');
+    // URL: .../api/agents/{agentName}/chat — take the segment before 'chat'
+    const chatIndex = parts.indexOf('chat');
+    const agentName = chatIndex > 0 ? parts[chatIndex - 1] : parts[parts.length - 2];
     await route.fulfill({
       status: 200,
       json: {

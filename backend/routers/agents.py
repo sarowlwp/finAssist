@@ -159,26 +159,24 @@ async def chat_with_agent(
                 detail=f"未找到 Agent: {agent_name}。可用的 Agent: {', '.join(agent_names)}"
             )
         
-        # 获取模型配置
-        llm_cfg = request.llm_config
-        agent_model_configs = {}
-        if not llm_cfg:
-            logger.info("从设置中加载 LLM 配置")
-            settings = settings_store.load()
-            llm_cfg = settings.llm_config
-            agent_model_configs = settings.agent_model_configs or {}
+        # 获取模型配置：始终从 settings 加载 agent_model_configs，request.llm_config 优先作为全局兜底
+        logger.info("从设置中加载 LLM 配置")
+        settings = settings_store.load()
+        llm_cfg = request.llm_config or settings.llm_config
+        agent_model_configs = settings.agent_model_configs or {}
         logger.info(f"使用的 LLM 配置: {llm_cfg}")
         logger.info(f"使用的 Agent 模型配置: {agent_model_configs}")
 
         # 创建 orchestrator 并聊天
         logger.info("创建 Orchestrator...")
         orchestrator = get_orchestrator(llm_cfg, agent_model_configs)
-        
+
         logger.info("调用 chat_with_agent...")
+        # 只有用户请求中明确指定了 llm_config 时才传递覆盖配置，否则让 orchestrator 使用各 agent 自身的配置
         response = await orchestrator.chat_with_agent(
             agent_name,
             request.message,
-            llm_cfg
+            request.llm_config
         )
         logger.info(f"收到响应: {response[:100]}..." if len(response) > 100 else f"收到响应: {response}")
         

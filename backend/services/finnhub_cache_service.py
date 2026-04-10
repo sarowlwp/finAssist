@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from models import FinnhubCache
 from typing import Dict, Any, Optional
 import logging
@@ -31,7 +31,7 @@ class FinnhubCacheService:
             cache_key = self._get_cache_key(data_type, ticker)
             cache_entry = self.db.query(FinnhubCache).filter(
                 FinnhubCache.cache_key == cache_key,
-                FinnhubCache.expires_at > datetime.now(timezone.utc)
+                FinnhubCache.expires_at > datetime.utcnow()
             ).first()
             if cache_entry:
                 logger.info(f"Cache hit for key: {cache_key}")
@@ -54,7 +54,7 @@ class FinnhubCacheService:
             else:
                 ttl = CACHE_TTL_CONFIG.get(data_type, DEFAULT_TTL)
 
-            expires_at = datetime.now(timezone.utc) + ttl
+            expires_at = datetime.utcnow() + ttl
 
             existing = self.db.query(FinnhubCache).filter(
                 FinnhubCache.cache_key == cache_key
@@ -93,7 +93,7 @@ class FinnhubCacheService:
     def delete_expired_cache(self) -> None:
         try:
             deleted_count = self.db.query(FinnhubCache).filter(
-                FinnhubCache.expires_at <= datetime.now(timezone.utc)
+                FinnhubCache.expires_at <= datetime.utcnow()
             ).delete()
             self.db.commit()
             logger.info(f"Expired cache cleanup completed, deleted {deleted_count} entries")
