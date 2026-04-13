@@ -219,8 +219,8 @@ export default function AnalysisPage() {
       const initialAnalysis: AnalysisData = {
         ticker,
         company_name: profileData?.company_name || `${ticker} 公司`,
-        current_price: quoteData?.price || 0,
-        change_percent: quoteData?.change_percent || 0,
+        current_price: quoteData?.current_price || 0,
+        change_percent: quoteData?.percent_change || 0,
         fusion_summary: '',
         news_report: '',
         sec_report: '',
